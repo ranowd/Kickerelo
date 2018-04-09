@@ -1,0 +1,35 @@
+from tkinter import *
+
+
+def changecolor1():
+    lab1["bg"] = "#FF00FF"
+    lab1["fg"] = "#FFFF00"
+    lab1["font"] = "Arial 20 italic"
+    lab1["height"] = "20"
+    lab1["width"] = "20"
+    lab1["anchor"] = "w"
+    return
+
+
+def changecolor2():
+    lab1["bg"] = "#0000FF"
+    lab1["fg"] = "#FF0000"
+    lab1["font"] = "Arial 20 bold"
+    lab1["height"] = "15"
+    lab1["width"] = "25"
+    lab1["anchor"] = "n"
+    return
+
+root = Tk()
+
+lab1 = Label(root, text="Moin")
+lab2 = Label(root, text="Moin")
+but1 = Button(root, text="Knopf1", command=changecolor1)
+but2 = Button(root, text="Knopf2", command=changecolor2)
+
+
+lab1.pack()
+lab2.pack()
+but1.pack()
+but2.pack()
+root.mainloop()
