@@ -2,18 +2,11 @@ import random
 import os
 import sqlite3
 import csv
+import Elo_Algorythm as elo
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import style
 style.use("fivethirtyeight")
-
-P_1 = 100.0
-P_2 = 100.0
-P_3 = 10.0
-A_0 = 0.5
-A_1 = 0.025
-A_2 = -86.7361737988404 * 10 ** (-20)
-A_3 = 0.00075
 
 
 def write_a_match_to_file(match_number):
@@ -55,7 +48,16 @@ def elo_extract(players):
     return elos
 
 
+def match_entry(match):
+    cur.execute("INSERT INTO matches (match_number, player_A1, player_A2, player_B1, player_B2, goals_A, goals_B) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (int(match[0]), match[1], match[2], match[3], match[4], int(match[5]), int(match[6])))
+    connection.commit()
+    return
+
+
 def write_matchdata(match):
+    match_entry(match)
     for j in range(1, 5):
         try:
             cur.execute("SELECT elo_value FROM " + match[j] + " WHERE match_number = 0")
@@ -70,35 +72,11 @@ def write_matchdata(match):
 
 def evaluate_match(players, GD):
     elos = elo_extract(players)
-    EAB = match_prediction(elos[0]+elos[1], elos[2]+elos[3])
-    SAB = result_evaluation(GD)
-    RAB = [P_3 * (EAB[0] - SAB[0]), P_3 * (EAB[1] - SAB[1])]
-    elos_new = (elo_distribution(elos[0], elos[1], RAB[0]) + elo_distribution(elos[2], elos[3], RAB[1]))
+    EAB = elo.prediction(elos)
+    SAB = elo.evaluation(GD)
+    RAB = [(EAB[0] - SAB[0]), (EAB[1] - SAB[1])]
+    elos_new = (elo.distribution(elos[0], elos[1], RAB[0]) + elo.distribution(elos[2], elos[3], RAB[1]))
     return elos_new
-
-
-def match_prediction(elo_A, elo_B):
-    expect_A = 1 / (1 + P_1 ** ((elo_A - elo_B) / P_2))
-    expect_B = 1 / (1 + P_1 ** ((elo_B - elo_A) / P_2))
-    return expect_A, expect_B
-
-
-def result_evaluation(goal_diff):
-    eval_A = A_3 * goal_diff ** 3 + A_2 * goal_diff ** 2 + A_1 * goal_diff + A_0
-    eval_B = A_3 * -goal_diff ** 3 + A_2 * -goal_diff ** 2 + A_1 * -goal_diff + A_0
-    return eval_A, eval_B
-
-
-def elo_distribution(elo_1, elo_2, elo_all):
-    perc_1 = elo_1/(elo_1 + elo_2)
-    perc_2 = 1-perc_1
-    if elo_all < 1:
-        elo_1 = elo_all * perc_1 + elo_1
-        elo_2 = elo_all * perc_2 + elo_2
-    else:
-        elo_1 = elo_all * (1 - perc_1) + elo_1
-        elo_2 = elo_all * (1 - perc_2) + elo_2
-    return elo_1, elo_2
 
 
 def read_playerdata(name):
@@ -132,42 +110,73 @@ def plot_fullgraph(x,y):
 
 
 
-if os.path.exists("./matchhistorie.csv"):
-    print("hamwa")
-else:
-    Names = ["Alia", "Hilma", "Debbra", "Austin", "Carola", "Verlene", "Matthew", "Maureen", "Dwana", "Kristal",
-             "Khadijah", "Laura",
-             "Annalisa", "Fransisca", "Youlanda", "Nolan", "Garnett", "Malcolm", "Ching", "Mandie", "Jillian",
-             # "Destiny", "Stacey",
-             # "Jamison", "Lance", "Gina", "Valerie", "Christiane", "Chieko", "Elane", "Nickie", "Glayds", "Doria",
-             # "Mozell", "Shae",
-             # "Jayme", "Syble", "Julieann", "Zetta", "Belkis", "Louvenia", "Madalene", "Nikia", "Clifton", "Randa",
-             "Jacob", "Madaline",
-             "Billye", "Rosalva", "Jacquetta"]
-    file_object = open("matchhistorie.csv", "w")
-    for i in range(500):
-         write_a_match_to_file(i+1)
-    file_object.close()
+# if os.path.exists("./matchhistorie.csv"):
+#     print("hamwa")
+# else:
+#     Names = ["Alia", "Hilma", "Debbra", "Austin", "Carola", "Verlene", "Matthew", "Maureen", "Dwana", "Kristal",
+#              "Khadijah", "Laura",
+#              "Annalisa", "Fransisca", "Youlanda", "Nolan", "Garnett", "Malcolm", "Ching", "Mandie", "Jillian",
+#              # "Destiny", "Stacey",
+#              # "Jamison", "Lance", "Gina", "Valerie", "Christiane", "Chieko", "Elane", "Nickie", "Glayds", "Doria",
+#              # "Mozell", "Shae",
+#              # "Jayme", "Syble", "Julieann", "Zetta", "Belkis", "Louvenia", "Madalene", "Nikia", "Clifton", "Randa",
+#              "Jacob", "Madaline",
+#              "Billye", "Rosalva", "Jacquetta"]
+#     file_object = open("matchhistorie.csv", "w")
+#     for i in range(500):
+#          write_a_match_to_file(i+1)
+#     file_object.close()
+
+
+
+
+## connect Database
+
+
 
 # if os.path.exists("./ELO.db"):
 #     os.remove("./ELO.db")
 
+## connect Database
+
 connection = sqlite3.connect("ELO.db")
 cur = connection.cursor()
-cur.execute("CREATE TABLE IF NOT EXISTS players (ID INTEGER, name TEXT)")
+cur.execute("CREATE TABLE IF NOT EXISTS players (ID INTEGER, name TEXT, team Text, status Text)")
+cur.execute("CREATE TABLE IF NOT EXISTS matches (match_number INTEGER, player_A1 TEXT, player_A2 TEXT, player_B1 TEXT, "
+            "player_B2 TEXT, goals_A INTEGER, goals_B INTEGER)")
 connection.commit()
+cur.execute("SELECT max(match_number) FROM matches")
+last_match = cur.fetchone()[0]
+if last_match is None:
+    last_match = 0
 
-match_file = open("matchhistorie.csv", "r")
+
+## Import matchfile
+
+match_file = open("match_history.csv", "r")
 reader = csv.reader(match_file, delimiter=";")
 
-# for row in reader:
-#     write_matchdata(row)
+for row in reader:
+    print(row[0])
+    if int(row[0]) > last_match:
+        write_matchdata(row)
+
+
+
+
+
+
+
+
+
+
+
 
 # matches2plot, elo2plot = read_playerdata("Alia")
-# plot_graph(matches2plot, elo2plot)
+# # plot_graph(matches2plot, elo2plot)
 # plot_fullgraph(matches2plot, elo2plot)
 
 
 connection.close()
-match_file.close()
+# match_file.close()
 plt.show()
