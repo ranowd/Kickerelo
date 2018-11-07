@@ -9,6 +9,7 @@ from matplotlib import style
 style.use("fivethirtyeight")
 
 
+# generate random matches
 def write_a_match_to_file(match_number):
     file_object.write(str(match_number) + ";")
     players = []
@@ -26,19 +27,24 @@ def write_a_match_to_file(match_number):
     return
 
 
+# Create a table in the Database with the name of the player
+# contains number of match played and Elo value after the match
 def create_table(table_name):
     cur.execute("CREATE TABLE IF NOT EXISTS " + table_name + " (match_number INTEGER, elo_value REAL)")
+    # First entry is start value (100) at match 0
     elo_entry(table_name, 0, 100)
     connection.commit()
     return
 
 
+# Enter the updated Elo after a match into the table with the players name
 def elo_entry(table_name, match_number, elo_value):
     cur.execute("INSERT INTO " + table_name + "(match_number, elo_value) VALUES (?, ?)", (match_number, elo_value))
     connection.commit()
     return
 
 
+# Get the current Elo of a list of player from their respective table
 def elo_extract(players):
     elos = []
     for player in players:
@@ -48,6 +54,7 @@ def elo_extract(players):
     return elos
 
 
+# Enter a match into the match history table
 def match_entry(match):
     cur.execute("INSERT INTO matches (match_number, player_A1, player_A2, player_B1, player_B2, goals_A, goals_B) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -56,26 +63,37 @@ def match_entry(match):
     return
 
 
+# Evaluate match and enter data into tables
 def write_matchdata(match):
+    # enter match into match history
     match_entry(match)
+    # check if tables for all players exist, if not create them
     for j in range(1, 5):
         try:
             cur.execute("SELECT elo_value FROM " + match[j] + " WHERE match_number = 0")
         except:
+            # create players table
             create_table(match[j])
+            # insert player into table of players
             cur.execute("INSERT INTO players (ID, name) VALUES (?, ?)", (4, match[j]))
+
+    # calculate new elo values from match data
     elos_new = evaluate_match(match[1:5], int(match[6]) - int(match[5]))
-    for j in range(1,5):
-        elo = elos_new[j-1]
-        elo_entry(match[j], match[0], elo)
+
+    # enter new elo values into players table
+    for j in range(1, 5):
+        # elo = elos_new[j-1]
+        # elo_entry(match[j], match[0], elo)
+        elo_entry(match[j], match[0], elos_new[j-1])
 
 
-def evaluate_match(players, GD):
+# calculate new elos from matchdata
+def evaluate_match(players, goal_difference):
     elos = elo_extract(players)
-    EAB = elo.prediction(elos)
-    SAB = elo.evaluation(GD)
-    RAB = [(EAB[0] - SAB[0]), (EAB[1] - SAB[1])]
-    elos_new = (elo.distribution(elos[0], elos[1], RAB[0]) + elo.distribution(elos[2], elos[3], RAB[1]))
+    expectations = elo.prediction(elos)
+    performances = elo.evaluation(goal_difference)
+    ratings = [(expectations[0] - performances[0]), (expectations[1] - performances[1])]
+    elos_new = (elo.distribution(elos[0], elos[1], ratings[0]) + elo.distribution(elos[2], elos[3], ratings[1]))
     return elos_new
 
 
@@ -95,7 +113,7 @@ def plot_graph(x, y):
     plt.plot(x, y)
 
 
-def plot_fullgraph(x,y):
+def plot_fullgraph(x, y):
     lim = max(x)
     x_full = []
     y_full = []
@@ -109,6 +127,25 @@ def plot_fullgraph(x,y):
     plt.plot(x_full, y_full)
 
 
+# import matches from match_history.csv
+def import_match_history():
+    # Get number of last match in database
+    cur.execute("SELECT max(match_number) FROM matches")
+    last_match = cur.fetchone()[0]
+    if last_match is None:
+        last_match = 0
+
+    # open file
+    match_file = open("match_history.csv", "r")
+    reader = csv.reader(match_file, delimiter=";")
+
+    # analyze all matches that are new
+    for row in reader:
+        print(row[0])
+        if int(row[0]) > last_match:
+            write_matchdata(row)
+
+    match_file.close()
 
 # if os.path.exists("./matchhistorie.csv"):
 #     print("hamwa")
@@ -129,52 +166,30 @@ def plot_fullgraph(x,y):
 
 
 
-
-## connect Database
-
-
-
 # if os.path.exists("./ELO.db"):
 #     os.remove("./ELO.db")
 
 ## connect Database
 
+
+########## MAIN ###################
 connection = sqlite3.connect("ELO.db")
 cur = connection.cursor()
+
+# create a table with all player names and their Data
 cur.execute("CREATE TABLE IF NOT EXISTS players (ID INTEGER, name TEXT, team Text, status Text)")
+# create a table witch contains the match history
 cur.execute("CREATE TABLE IF NOT EXISTS matches (match_number INTEGER, player_A1 TEXT, player_A2 TEXT, player_B1 TEXT, "
             "player_B2 TEXT, goals_A INTEGER, goals_B INTEGER)")
 connection.commit()
-cur.execute("SELECT max(match_number) FROM matches")
-last_match = cur.fetchone()[0]
-if last_match is None:
-    last_match = 0
+
+# import match history
+import_match_history()
 
 
-## Import matchfile
-
-match_file = open("match_history.csv", "r")
-reader = csv.reader(match_file, delimiter=";")
-
-for row in reader:
-    print(row[0])
-    if int(row[0]) > last_match:
-        write_matchdata(row)
-
-
-
-
-
-
-
-
-
-
-
-
-# matches2plot, elo2plot = read_playerdata("Alia")
-# # plot_graph(matches2plot, elo2plot)
-# plot_fullgraph(matches2plot, elo2plot)
+matches2plot, elo2plot = read_playerdata("Jan")
+# plot_graph(matches2plot, elo2plot)
+plot_fullgraph(matches2plot, elo2plot)
 
 
 connection.close()
