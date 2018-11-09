@@ -40,7 +40,7 @@ def create_table(table_name):
 # Enter the updated Elo after a match into the table with the players name
 def elo_entry(table_name, match_number, elo_value):
     cur.execute("INSERT INTO " + table_name + "(match_number, elo_value) VALUES (?, ?)", (match_number, elo_value))
-    connection.commit()
+    #connection.commit()
     return
 
 
@@ -59,7 +59,7 @@ def match_entry(match):
     cur.execute("INSERT INTO matches (match_number, player_A1, player_A2, player_B1, player_B2, goals_A, goals_B) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (int(match[0]), match[1], match[2], match[3], match[4], int(match[5]), int(match[6])))
-    connection.commit()
+    #connection.commit()
     return
 
 
@@ -185,9 +185,10 @@ connection.commit()
 
 # import match history
 import_match_history()
+connection.commit()
 
 
-matches2plot, elo2plot = read_playerdata("Jan")
+matches2plot, elo2plot = read_playerdata("Tom_R")
 # plot_graph(matches2plot, elo2plot)
 plot_fullgraph(matches2plot, elo2plot)
 
