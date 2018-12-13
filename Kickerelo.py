@@ -188,7 +188,7 @@ import_match_history()
 connection.commit()
 
 
-matches2plot, elo2plot = read_playerdata("Tom_R")
+matches2plot, elo2plot = read_playerdata("Rano_M")
 # plot_graph(matches2plot, elo2plot)
 plot_fullgraph(matches2plot, elo2plot)
 
