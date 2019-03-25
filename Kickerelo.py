@@ -195,4 +195,5 @@ plot_fullgraph(matches2plot, elo2plot)
 
 connection.close()
 # match_file.close()
-plt.show()
+#plt.show()
+plt.savefig("test_plot.png", dpi=100)
