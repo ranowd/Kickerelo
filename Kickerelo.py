@@ -97,13 +97,13 @@ def evaluate_match(players, goal_difference):
     return elos_new
 
 
-def read_playerdata(name):
-    cur.execute("SELECT match_number FROM " + name)
-    res = cur.fetchall()
+def read_playerdata(name, cursor):
+    cursor.execute("SELECT match_number FROM " + name)
+    res = cursor.fetchall()
     matches = [x[0] for x in res]
     print(matches)
-    cur.execute("SELECT elo_value FROM " + name)
-    res = cur.fetchall()
+    cursor.execute("SELECT elo_value FROM " + name)
+    res = cursor.fetchall()
     elo = [x[0] for x in res]
     print(elo)
     return matches, elo
@@ -125,13 +125,14 @@ def plot_fullgraph(x, y):
             y_curr = y[x_curr]
         y_full.append(y_curr)
     plt.plot(x_full, y_full)
-
+    plt.savefig("elo_plot.png", dpi=100)
+    plt.clf()
 
 # import matches from match_history.csv
-def import_match_history():
+def import_match_history(cursor):
     # Get number of last match in database
-    cur.execute("SELECT max(match_number) FROM matches")
-    last_match = cur.fetchone()[0]
+    cursor.execute("SELECT max(match_number) FROM matches")
+    last_match = cursor.fetchone()[0]
     if last_match is None:
         last_match = 0
 
@@ -173,27 +174,34 @@ def import_match_history():
 
 
 ########## MAIN ###################
-connection = sqlite3.connect("ELO.db")
-cur = connection.cursor()
+def updateDatabase():
+    connection = sqlite3.connect("ELO.db")
+    cur = connection.cursor()
 
-# create a table with all player names and their Data
-cur.execute("CREATE TABLE IF NOT EXISTS players (ID INTEGER, name TEXT, team Text, status Text)")
-# create a table witch contains the match history
-cur.execute("CREATE TABLE IF NOT EXISTS matches (match_number INTEGER, player_A1 TEXT, player_A2 TEXT, player_B1 TEXT, "
-            "player_B2 TEXT, goals_A INTEGER, goals_B INTEGER)")
-connection.commit()
+    # create a table with all player names and their Data
+    cur.execute("CREATE TABLE IF NOT EXISTS players (ID INTEGER, name TEXT, team Text, status Text)")
+    # create a table witch contains the match history
+    cur.execute("CREATE TABLE IF NOT EXISTS matches (match_number INTEGER, player_A1 TEXT, player_A2 TEXT, player_B1 TEXT, "
+                "player_B2 TEXT, goals_A INTEGER, goals_B INTEGER)")
+    connection.commit()
 
-# import match history
-import_match_history()
-connection.commit()
+    # import match history
+    import_match_history(cur)
+    connection.commit()
+
+    return cur
+
+def accessDatabase():
+    connection = sqlite3.connect("ELO.db")
+    cur = connection.cursor()
+    return cur
 
 
-matches2plot, elo2plot = read_playerdata("Rano_M")
-# plot_graph(matches2plot, elo2plot)
-plot_fullgraph(matches2plot, elo2plot)
+    #matches2plot, elo2plot = read_playerdata("Rano_M")
+    #plot_graph(matches2plot, elo2plot)
+    #plot_fullgraph(matches2plot, elo2plot)
 
-
-connection.close()
+   # connection.close()
 # match_file.close()
 #plt.show()
-plt.savefig("test_plot.png", dpi=100)
+#plt.savefig("test_plot.png", dpi=100)
