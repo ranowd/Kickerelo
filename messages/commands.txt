@@ -1,0 +1,4 @@
+*Ich kann folgendes Machen*:
+
+/elo            -    Wie ist meine aktuelle ELO?
+/eloProgress    -    Wie entwickelte sich meine ELO in letzter Zeit?
