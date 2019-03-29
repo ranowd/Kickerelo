@@ -88,6 +88,7 @@ def write_matchdata(cursor,connection, match):
         # elo_entry(match[j], match[0], elo)
         elo_entry(cursor, match[j], match[0], elos_new[j-1])
 
+    connection.commit()
 
 # calculate new elos from matchdata
 def evaluate_match(players, goal_difference):
@@ -149,15 +150,23 @@ def import_match_history(cursor, connection):
             write_matchdata(cursor, connection, row)
 
     match_file.close()
+    connection.commit()
 
 def generate_player_list():
-
     connection = sqlite3.connect("ELO.db")
     cur = connection.cursor()
     cur.execute("SELECT name FROM " + "players")
     res = cur.fetchall()
     players = [x[0] for x in res]
     return players
+
+def ranking():
+    players = generate_player_list()
+    elos = elo_extract(players)
+    elosPlayers = zip(elos, players)
+    ranking = sorted(elosPlayers)
+    ranking.reverse()
+    return ranking
 
 # if os.path.exists("./matchhistorie.csv"):
 #     print("hamwa")

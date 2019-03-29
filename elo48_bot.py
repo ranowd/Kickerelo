@@ -61,7 +61,7 @@ def eloProgressInquiry(update, conext):
       #time.sleep(5)
       #ToDo fetch elo score
       print("HEY")
-      context.bot.send_photo(chat_id, open('elo_plot.png', 'rb'))
+      context.bot.send_photo(chat_id=chat_id, photo = open('elo_plot.png', 'rb'))
       time.sleep(0.5)
       os.remove("elo_plot.png")
   else:
@@ -100,6 +100,9 @@ def newresult(update, context):
   else:
     notAllowed(bot, chat_id, "Add new results")
 
+
+
+
 updater = Updater(token, use_context=True)
 dp = updater.dispatcher
 
@@ -120,7 +123,7 @@ updater.idle()
 
 #####################
 #     TODO
-#     1- Parse user input
+#
 #     2- Ranking top 20
 #     3- My Ranking
 #     4- Welcome Message / Help
