@@ -50,45 +50,55 @@ def eloInquiryFremd(update, context):
   else:
     notAllowed(context, chat_id, "elo Inquiry fremd")
 
-# def eloProgressInquiry(bot, update):
-#   print("HEY")
-#   chat_id = update.message.chat_id
-#   user = update.message.from_user['username']
-#   userData = userManagement.dataByUsername(user)
-#   if(userData != -1):
-#       ELOdata = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())
+def eloProgressInquiry(update, conext):
+  print("HEY")
+  chat_id = update.message.chat_id
+  user = update.message.from_user['username']
+  userData = userManagement.dataByUsername(user)
+  if(userData != -1):
+      ELOdata = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())
+      Kickerelo.plot_fullgraph(ELOdata[0], ELOdata[1])
+      #time.sleep(5)
+      #ToDo fetch elo score
+      print("HEY")
+      context.bot.send_photo(chat_id, open('elo_plot.png', 'rb'))
+      time.sleep(0.5)
+      os.remove("elo_plot.png")
+  else:
+      notAllowed(bot, chat_id, "Own progress Inquiry")
 
-#       Kickerelo.plot_fullgraph(ELOdata[0], ELOdata[1])
-#       #time.sleep(5)
-#       #ToDo fetch elo score
-#       #bot.send_photo(chat_id, photo='https://telegram.org/img/t_logo.png')
-#       bot.send_photo(chat_id, photo=open('elo_plot.png', 'rb'))
-#       time.sleep(0.5)
-#       os.remove("elo_plot.png")
-#   else:
-#       notAllowed(bot, chat_id, "Own progress Inquiry")
+def checkAdmin(update):
+  user = update.message.from_user['username']
+  userData = userManagement.dataByUsername(user)
+  if(userData[0] == elomaster): return True
+  else: return False
 
-# def checkAdmin(update):
-#   user = update.message.from_user['username']
-#   userData = userManagement.dataByUsername(user)
-#   if(userData[0] == elomaster): return True
-#   else: return False
-
-# def updateUserDatabase(bot, update):
-#   chat_id = update.message.chat_id
-#   if(checkAdmin(update)):
-#       os.remove("usersdb.db")
-#       csv2sqlite.convert("userlist.csv", "usersdb.db", "users")
-#       bot.send_message(chat_id=chat_id, text="Aktualisiert!")
-#   else:
-#       notAllowed(bot, chat_id, "Update user Database")
+def updateUserDatabase(update, context):
+  chat_id = update.message.chat_id
+  if(checkAdmin(update)):
+      os.remove("usersdb.db")
+      csv2sqlite.convert("userlist.csv", "usersdb.db", "users")
+      context.bot.send_message(chat_id=chat_id, text="Aktualisiert!")
+  else:
+      notAllowed(bot, chat_id, "Update user Database")
 
 def bla(update, context):
   print(update.message.text)
   print(context.args)
   context.bot.send_message(chat_id=chat_id, text="Hi")
 
-  # print(chat_id)
+def newresult(update, context):
+  if(checkAdmin(update)):
+    print(Kickerelo.getLastGame())
+    lastGameNum = int(Kickerelo.getLastGame()[0].split(";")[0]) # Get the first part of the last macht, which is the game number
+    print(lastGameNum)
+    Game1Str = "{};{}\n".format((lastGameNum+1), context.args[0])
+    Game2Str = "{};{}\n".format((lastGameNum+2), context.args[1])
+    Kickerelo.addResultLine(Game1Str)
+    Kickerelo.addResultLine(Game2Str)
+    context.bot.send_message(chat_id=chat_id, text="Spiele {} und {} wurden erfolgreich hinzugefügt.".format((lastGameNum+1), (lastGameNum+2)))
+  else:
+    notAllowed(bot, chat_id, "Add new results")
 
 updater = Updater(token, use_context=True)
 dp = updater.dispatcher
@@ -100,9 +110,10 @@ dp.add_handler(CommandHandler('start',start))
 dp.add_handler(CommandHandler('help',helpText))
 dp.add_handler(CommandHandler('elo',eloInquiry))
 dp.add_handler(CommandHandler('elovon',eloInquiryFremd))
+dp.add_handler(CommandHandler('newresult',newresult))
 
 # dp.add_handler(CommandHandler('upUsers',updateUserDatabase))
-# dp.add_handler(CommandHandler('eloProgress',eloProgressInquiry))
+dp.add_handler(CommandHandler('eloProgress',eloProgressInquiry))
 dp.add_handler(CommandHandler('bla',bla))
 updater.start_polling()
 updater.idle()

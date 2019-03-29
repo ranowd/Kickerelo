@@ -20,7 +20,7 @@ def callback(tex):
 	Ergebnis_2 = "{};{}".format(dropdowns[6][0].get(), dropdowns[7][0].get())
 	s = "/newresult "+Spieler+Ergebnis_1+" "+Spieler+Ergebnis_2+"\n"
 	tex.insert(END, s)
-	tex.see(END)    
+	tex.see(END)
 
 
 master = Tk()
@@ -54,4 +54,4 @@ Button = Button(frame, text="Generate Telegram Command", command=cbc(tex))
 Button.pack(side=LEFT)
 
 # Start the GUI
-mainloop()	
+mainloop()
