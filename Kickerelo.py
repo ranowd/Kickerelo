@@ -131,6 +131,22 @@ def plot_fullgraph(x, y):
     plt.savefig("elo_plot.png", dpi=100)
     plt.clf()
 
+def plotGameGraph(x, y):
+    lim = max(x)
+    x_full = [[], [], [], []]
+    y_full = [[], [], [], []]
+    y_curr = 100
+    for i in range(4):
+        for k in range(0, lim+1):
+            x_full.append(k)
+            if k in x:
+                x_curr = x.index(k)
+                y_curr = y[x_curr]
+            y_full.append(y_curr)
+    plt.plot(x_full, y_full)
+    plt.savefig("elo_plot.png", dpi=100)
+    plt.clf()
+
 # import matches from match_history.csv
 def import_match_history(cursor, connection):
     # Get number of last match in database

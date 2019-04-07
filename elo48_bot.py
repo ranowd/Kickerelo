@@ -97,6 +97,20 @@ def newresult(update, context):
     Kickerelo.addResultLine(Game1Str)
     Kickerelo.addResultLine(Game2Str)
     context.bot.send_message(chat_id=chat_id, text="Spiele {} und {} wurden erfolgreich hinzugefügt.".format((lastGameNum+1), (lastGameNum+2)))
+    players = Game1Str.split(";")[1:5] # extract player names for the analysis part
+    elosBefore = Kickerelo.elo_extract() # extract the elo before updating the results
+    Kickerelo.updateDatabase() # update the elo database
+    elosAfter = Kickerelo.elo_extract()
+
+    # Match analysis
+    elosDifference = elosAfter - elosBefore # calculate elo difference
+    ranking = Kickerelo.ranking() # get current ranking
+    
+    #todo match analysis: elo difference, ranking, graphs with progress
+
+
+    #todo send the analysis results to all the players
+
   else:
     notAllowed(bot, chat_id, "Add new results")
 
