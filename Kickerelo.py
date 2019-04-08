@@ -3,6 +3,7 @@ import os
 import sqlite3
 import csv
 import Elo_Algorythm as elo
+import userManagement
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import style
@@ -184,6 +185,21 @@ def ranking():
     ranking.reverse()
     return ranking
 
+def rankingFormat(ranking, elomaster = False, highlight = [], legends = 0):
+    i = 1
+    identity = 2
+    if(elomaster == True): identity = 1
+    outputStr = "Ranking:\n"
+    for item in ranking:
+        player = userManagement.dataByName(item[1])
+        if((legends == 0) and (player[4] == "legend")):
+            continue
+        if(player[1] in highlight):
+            outputStr += "{}: {} - {:.2f}\n".format(i, player[identity], item[0]) #todo actual highlighting
+        else:
+            outputStr += "{}: {} - {:.2f}\n".format(i, player[identity], item[0])
+        i += 1
+    return outputStr
 # if os.path.exists("./matchhistorie.csv"):
 #     print("hamwa")
 # else:

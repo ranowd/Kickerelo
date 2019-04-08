@@ -76,9 +76,8 @@ def checkAdmin(update):
 def updateUserDatabase(update, context):
   chat_id = update.message.chat_id
   if(checkAdmin(update)):
-      os.remove("usersdb.db")
-      csv2sqlite.convert("userlist.csv", "usersdb.db", "users")
-      context.bot.send_message(chat_id=chat_id, text="Aktualisiert!")
+    userManagement.csvUpdatePlayerDb()
+    context.bot.send_message(chat_id=chat_id, text="Aktualisiert!")
   else:
       notAllowed(bot, chat_id, "Update user Database")
 
@@ -96,21 +95,26 @@ def newresult(update, context):
     Game2Str = "{};{}\n".format((lastGameNum+2), context.args[1])
     Kickerelo.addResultLine(Game1Str)
     Kickerelo.addResultLine(Game2Str)
+    chat_id = update.message.chat_id
     context.bot.send_message(chat_id=chat_id, text="Spiele {} und {} wurden erfolgreich hinzugefügt.".format((lastGameNum+1), (lastGameNum+2)))
     players = Game1Str.split(";")[1:5] # extract player names for the analysis part
-    elosBefore = Kickerelo.elo_extract() # extract the elo before updating the results
+    elosBefore = Kickerelo.elo_extract(players) # extract the elo before updating the results
     Kickerelo.updateDatabase() # update the elo database
-    elosAfter = Kickerelo.elo_extract()
-
-    # Match analysis
+    elosAfter = Kickerelo.elo_extract(players)
+    ## Match analysis
+    # elo difference
     elosDifference = elosAfter - elosBefore # calculate elo difference
+    elosDifferenceText = "ELO Difference:\n"
+    for player, diff in zip(players,elosDifference):
+      elosDifferenceText += "{}: {}\n".format(player, diff)
+    #ranking
     ranking = Kickerelo.ranking() # get current ranking
-    
-    #todo match analysis: elo difference, ranking, graphs with progress
-
-
+    rankingText = Kickerelo.rankingFormat(ranking, True, players, 0)
+    #todo match analysis: graphs with progress
+    #todo print match analysis: elo difference, ranking, graphs with progress
+    context.bot.send_message(chat_id=chat_id, text=elosDifferenceText)
+    context.bot.send_message(chat_id=chat_id, text=rankingText)
     #todo send the analysis results to all the players
-
   else:
     notAllowed(bot, chat_id, "Add new results")
 

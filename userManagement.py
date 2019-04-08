@@ -1,6 +1,8 @@
 import sqlite3
 import Kickerelo
 import csv
+import os
+import csv2sqlite
 
 def dataByName(name):
 	# connect to the database
@@ -50,7 +52,14 @@ def csvAddNewPlayer(username, name, pseudo, role, status, team):
 		f.write(newPlayerData)
 		f.close()
 
+def csvUpdatePlayerDb():
+	try:
+		os.remove("usersdb.db")
+	except:pass
+	csv2sqlite.convert("userlist.csv", "usersdb.db", "users")
+
 def autoAddNewPlayers():
+	csvUpdatePlayerDb()
 	playersFromGames = Kickerelo.generate_player_list()
 	for player in playersFromGames:
 		if(dataByName(player) == -1):
@@ -66,8 +75,8 @@ def editSpecificPlayer(name, inputList):
 		writer = csv.writer(outf, quoting = csv.QUOTE_ALL)
 		fltrInputList = inputList.copy()
 		for i in range(len(fltrInputList)):
-    		if(fltrInputList[i] == "-1"):
-    			fltrInputList[i] = line[i]
+			if(fltrInputList[i] == "-1"):
+				fltrInputList[i] = line[i]
 		for line in reader:
 			if line[1] == name:
 				writer.writerow([fltrInputList[0], line[1], fltrInputList[2], fltrInputList[3], fltrInputList[4], fltrInputList[5], fltrInputList[6]])
@@ -77,3 +86,17 @@ def editSpecificPlayer(name, inputList):
 				writer.writerow(line)
 		writer.writerows(reader)
 		return found
+
+def createUserListFile():
+	text = "options = ['player',"
+	players = Kickerelo.generate_player_list()
+	players.sort()
+	for name in players:
+		player = dataByName(name)
+		if(player[4] == "aktiv"):
+			text += "'{}',".format(name)
+	text = text[:-1]
+	text += "]"
+	with open('players.py', 'w') as f:
+		f.write(text)
+		f.close()
