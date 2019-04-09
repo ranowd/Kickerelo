@@ -7,6 +7,7 @@ import userManagement
 import Kickerelo
 import time
 import os
+from datetime import datetime
 
 def readMessages(filePath):
   with open(filePath, encoding='utf8') as f:
@@ -15,15 +16,41 @@ def readMessages(filePath):
 
 def start(update, context):
   chat_id = update.message.chat_id
-  context.bot.send_message(chat_id=chat_id, text=readMessages("messages/welcome.txt").format(elomaster))
+  user = update.message.from_user['username']
+  userData = userManagement.dataByUsername(user)
+  if(userData != -1):
+    context.bot.send_message(chat_id=chat_id, text=readMessages("messages/welcome.txt").format(elomaster))
+    if(update.message.chat.type == "private"):
+      dataList = 7*['-1']
+      dataList[-1] = str(chat_id)
+      userManagement.editSpecificPlayer(userData[1], dataList)
+  else:
+    notAllowed(update, context, chat_id, "start")
 
 def helpText(update, context):
   chat_id = update.message.chat_id
-  context.bot.send_message(chat_id=chat_id, text=readMessages("messages/commands.txt"), parse_mode=telegram.ParseMode.MARKDOWN)
+  user = update.message.from_user['username']
+  userData = userManagement.dataByUsername(user)
+  if(userData != -1):
+    context.bot.send_message(chat_id=chat_id, text=readMessages("messages/commands.txt"), parse_mode=telegram.ParseMode.MARKDOWN)
+  else:
+    notAllowed(update, context, chat_id, "help")
 
-def notAllowed(context, chat_id, logmessage):
-  context.bot.send_message(chat_id=chat_id, text="Leider ist dein user nicht freigeschaltet, kontaktiere bitte ELO business associate @{}}".format(elomaster))
-
+def notAllowed(update, context, chat_id, logmessage):
+  print(elomaster)
+  automessage = "Leider ist dein user nicht freigeschaltet, kontaktiere bitte ELO business associate @{}".format(elomaster)
+  #print(automessage)
+  context.bot.send_message(chat_id=chat_id, text=automessage)
+  now = datetime.now()
+  date_time = now.strftime("%d/%m/%Y - %H:%M:%S")
+  username = update.message.chat.username
+  first = update.message.chat.first_name
+  last = update.message.chat.last_name
+  logText = "{}: {} {}, {}, {}\n".format(date_time, first, last, username, logmessage)
+  print(logText)
+  with open('violations_log.csv','a') as f:
+    f.write(logText)
+    f.close()
 
 def eloInquiry(update, context):
   chat_id = update.message.chat_id
@@ -33,7 +60,7 @@ def eloInquiry(update, context):
       currentELO = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())[1][-1]
       context.bot.send_message(chat_id=chat_id, text="Deine aktuelle ELO beträgt: {:.2f}".format(currentELO))
   else:
-    notAllowed(context, chat_id, "elo Inquiry")
+    notAllowed(update, context, chat_id, "elo Inquiry")
 
 def eloInquiryFremd(update, context):
   chat_id = update.message.chat_id
@@ -48,24 +75,22 @@ def eloInquiryFremd(update, context):
     else:
       context.bot.send_message(chat_id=chat_id, text="User Leider nicht gefunden.")
   else:
-    notAllowed(context, chat_id, "elo Inquiry fremd")
+    notAllowed(update, context, chat_id, "elo Inquiry fremd")
 
-def eloProgressInquiry(update, conext):
-  print("HEY")
+def eloProgressInquiry(update, context):
+  print("Step1")
   chat_id = update.message.chat_id
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
   if(userData != -1):
       ELOdata = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())
-      Kickerelo.plot_fullgraph(ELOdata[0], ELOdata[1])
+      Kickerelo.plot_fullgraph(ELOdata[0][-100:], ELOdata[1][-100:])
       #time.sleep(5)
-      #ToDo fetch elo score
-      print("HEY")
       context.bot.send_photo(chat_id=chat_id, photo = open('elo_plot.png', 'rb'))
       time.sleep(0.5)
       os.remove("elo_plot.png")
   else:
-      notAllowed(bot, chat_id, "Own progress Inquiry")
+      notAllowed(update, context, chat_id, "Own progress Inquiry")
 
 def checkAdmin(update):
   user = update.message.from_user['username']
@@ -79,7 +104,31 @@ def updateUserDatabase(update, context):
     userManagement.csvUpdatePlayerDb()
     context.bot.send_message(chat_id=chat_id, text="Aktualisiert!")
   else:
-      notAllowed(bot, chat_id, "Update user Database")
+      notAllowed(update, context, chat_id, "Update user Database")
+
+def editPlayer(update, context):
+  chat_id = update.message.chat_id
+  if(checkAdmin(update)):
+    userDataList = context.args[0].split(";")
+    userDataList.append('-1')
+    name = userDataList[1]
+    if(len(userDataList)==7):
+      userManagement.editSpecificPlayer(name, userDataList)
+      context.bot.send_message(chat_id=chat_id, text="Spieler wurde aktualisiert.")
+    else: context.bot.send_message(chat_id=chat_id, text="Geht nicht, falsche Eingabe.")
+  else:
+      notAllowed(update, context, chat_id, "send user list")
+
+def sendUserList(update, context):
+  chat_id = update.message.chat_id
+  if(checkAdmin(update)):
+    userManagement.createUserListFile()
+    context.bot.send_document(chat_id=chat_id, document=open('players.py','rb'))
+    try:
+      os.remove('players.py')
+    except:pass
+  else:
+      notAllowed(update, context, chat_id, "send user list")
 
 def bla(update, context):
   print(update.message.text)
@@ -116,25 +165,29 @@ def newresult(update, context):
     context.bot.send_message(chat_id=chat_id, text=rankingText)
     #todo send the analysis results to all the players
   else:
-    notAllowed(bot, chat_id, "Add new results")
-
-
-
+    notAllowed(update, context, chat_id, "Add new results")
 
 updater = Updater(token, use_context=True)
 dp = updater.dispatcher
 
 #logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 #                     level=logging.INFO)
-
+#####################
+#
+#     General Functions
+#
 dp.add_handler(CommandHandler('start',start))
 dp.add_handler(CommandHandler('help',helpText))
 dp.add_handler(CommandHandler('elo',eloInquiry))
 dp.add_handler(CommandHandler('elovon',eloInquiryFremd))
-dp.add_handler(CommandHandler('newresult',newresult))
-
-# dp.add_handler(CommandHandler('upUsers',updateUserDatabase))
 dp.add_handler(CommandHandler('eloProgress',eloProgressInquiry))
+#
+#     Admin Functions
+#
+# dp.add_handler(CommandHandler('upUsers',updateUserDatabase))
+dp.add_handler(CommandHandler('newresult',newresult))
+dp.add_handler(CommandHandler('editPlayer',editPlayer))
+dp.add_handler(CommandHandler('sendUserList',sendUserList))
 dp.add_handler(CommandHandler('bla',bla))
 updater.start_polling()
 updater.idle()

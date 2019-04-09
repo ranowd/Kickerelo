@@ -122,7 +122,7 @@ def plot_fullgraph(x, y):
     x_full = []
     y_full = []
     y_curr = 100
-    for k in range(0, lim+1):
+    for k in range(min(x), lim+1):
         x_full.append(k)
         if k in x:
             x_curr = x.index(k)

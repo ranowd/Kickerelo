@@ -33,7 +33,7 @@ def callback(tex, option):
 		Ergebnis_2 = "{};{}".format(dropdowns[6][0].get(), dropdowns[7][0].get())
 		s = "/newresult "+Spieler+Ergebnis_1+" "+Spieler+Ergebnis_2+"\n"
 	if option == 2:
-		s =  "/editPlayer {} {} {} {} {} {}\n".format(dropdowns[0][0].get(), textFields[0][1].get(), textFields[1][1].get(), textFields[2][1].get(), textFields[3][1].get(), textFields[4][1].get())
+		s =  "/editPlayer {};{};{};{};{};{}\n".format(textFields[0][1].get(), dropdowns[0][0].get(), textFields[1][1].get(), textFields[2][1].get(), textFields[3][1].get(), textFields[4][1].get())
 	tex.insert(END, s)
 	tex.see(END)
 
@@ -60,18 +60,9 @@ dropdowns = []
 create_4_dropdowns(OPTIONS_Names,dropdowns, 0)
 create_4_dropdowns(OPTIONS_Score,dropdowns, 10)
 
-# UNDER CONSTRUCTION TEXT FIELDS
+# Create Text Fields
 textFields = []
 titles = ["username","pseudo","role","status","team"]
-# Label(frame2, text="First Name").grid(row=0)
-# Label(frame2, text="Last Name").grid(row=1)
-
-# e1 = Entry(frame2)
-# e2 = Entry(frame2)
-
-# e1.grid(row=0, column=1)
-# e2.grid(row=1, column=1)
-
 create_textfields(titles,textFields) # 5 textfields
 
 # Action Buttons to generate strings

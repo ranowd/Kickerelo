@@ -47,7 +47,7 @@ def dataByUsername(username):
 		return data
 
 def csvAddNewPlayer(username, name, pseudo, role, status, team):
-	newPlayerData = '"{}","{}","{}","{}","{}","{}", ""\n'.format(username, name, pseudo, role, status, team)
+	newPlayerData = '"{}","{}","{}","{}","{}","{}",""\n'.format(username, name, pseudo, role, status, team)
 	with open('userlist.csv','a') as f:
 		f.write(newPlayerData)
 		f.close()
@@ -74,11 +74,11 @@ def editSpecificPlayer(name, inputList):
 		found = 0 # a flag stating if the user was found in the list
 		writer = csv.writer(outf, quoting = csv.QUOTE_ALL)
 		fltrInputList = inputList.copy()
-		for i in range(len(fltrInputList)):
-			if(fltrInputList[i] == "-1"):
-				fltrInputList[i] = line[i]
 		for line in reader:
 			if line[1] == name:
+				for i in range(len(fltrInputList)):
+					if(fltrInputList[i] == "-1"):
+						fltrInputList[i] = line[i]
 				writer.writerow([fltrInputList[0], line[1], fltrInputList[2], fltrInputList[3], fltrInputList[4], fltrInputList[5], fltrInputList[6]])
 				found = 1
 				break
