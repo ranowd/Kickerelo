@@ -33,8 +33,10 @@ def helpText(update, context):
   userData = userManagement.dataByUsername(user)
   if(userData != -1):
     context.bot.send_message(chat_id=chat_id, text=readMessages("messages/commands.txt"), parse_mode=telegram.ParseMode.MARKDOWN)
+    print("Help text viewed")
   else:
     notAllowed(update, context, chat_id, "help")
+  if(checkAdmin(update)):context.bot.send_message(chat_id=chat_id, text=readMessages("messages/commandsAdmin.txt"), parse_mode=telegram.ParseMode.MARKDOWN)
 
 def notAllowed(update, context, chat_id, logmessage):
   print(elomaster)
@@ -59,6 +61,7 @@ def eloInquiry(update, context):
   if(userData != -1):
       currentELO = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())[1][-1]
       context.bot.send_message(chat_id=chat_id, text="Deine aktuelle ELO beträgt: {:.2f}".format(currentELO))
+      print("Read Elo")
   else:
     notAllowed(update, context, chat_id, "elo Inquiry")
 
@@ -72,13 +75,13 @@ def eloInquiryFremd(update, context):
     if(userDataFremd != -1):
       currentELO = Kickerelo.read_playerdata(userDataFremd[1], Kickerelo.accessDatabase())[1][-1]
       context.bot.send_message(chat_id=chat_id, text="Die aktuelle ELO von {} beträgt: {:.2f}".format(context.args[0], currentELO))
+      print("Read Elo von")
     else:
       context.bot.send_message(chat_id=chat_id, text="User Leider nicht gefunden.")
   else:
     notAllowed(update, context, chat_id, "elo Inquiry fremd")
 
 def eloProgressInquiry(update, context):
-  print("Step1")
   chat_id = update.message.chat_id
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
@@ -89,6 +92,7 @@ def eloProgressInquiry(update, context):
       context.bot.send_photo(chat_id=chat_id, photo = open('elo_plot.png', 'rb'))
       time.sleep(0.5)
       os.remove("elo_plot.png")
+      print("Elo progress")
   else:
       notAllowed(update, context, chat_id, "Own progress Inquiry")
 
@@ -115,6 +119,7 @@ def editPlayer(update, context):
     if(len(userDataList)==7):
       userManagement.editSpecificPlayer(name, userDataList)
       context.bot.send_message(chat_id=chat_id, text="Spieler wurde aktualisiert.")
+      userManagement.csvUpdatePlayerDb()
     else: context.bot.send_message(chat_id=chat_id, text="Geht nicht, falsche Eingabe.")
   else:
       notAllowed(update, context, chat_id, "send user list")
@@ -149,29 +154,57 @@ def newresult(update, context):
     players = Game1Str.split(";")[1:5] # extract player names for the analysis part
     elosBefore = Kickerelo.elo_extract(players) # extract the elo before updating the results
     Kickerelo.updateDatabase() # update the elo database
+    userManagement.autoAddNewPlayers()
+    userManagement.csvUpdatePlayerDb()
     elosAfter = Kickerelo.elo_extract(players)
     ## Match analysis
     # elo difference
-    elosDifference = elosAfter - elosBefore # calculate elo difference
-    elosDifferenceText = "ELO Difference:\n"
+    elosDifference = [a_i - b_i for a_i, b_i in zip(elosAfter, elosBefore)] # calculate elo difference
+    elosDifferenceText = "*ELO Difference:*\n"
     for player, diff in zip(players,elosDifference):
-      elosDifferenceText += "{}: {}\n".format(player, diff)
+      elosDifferenceText += "{}: {:.2f}\n".format(player, diff)
     #ranking
     ranking = Kickerelo.ranking() # get current ranking
     rankingText = Kickerelo.rankingFormat(ranking, True, players, 0)
     #todo match analysis: graphs with progress
     #todo print match analysis: elo difference, ranking, graphs with progress
-    context.bot.send_message(chat_id=chat_id, text=elosDifferenceText)
-    context.bot.send_message(chat_id=chat_id, text=rankingText)
+    context.bot.send_message(chat_id=chat_id, text=rankingText, parse_mode=telegram.ParseMode.HTML)
+    context.bot.send_message(chat_id=chat_id, text=elosDifferenceText, parse_mode=telegram.ParseMode.HTML)
     #todo send the analysis results to all the players
-  else:
-    notAllowed(update, context, chat_id, "Add new results")
+  else: notAllowed(update, context, chat_id, "Add new results")
 
+def getRanking(update, context):
+  chat_id = update.message.chat_id
+  user = update.message.from_user['username']
+  userData = userManagement.dataByUsername(user)
+  if(userData != -1):
+    ranking = Kickerelo.ranking() # get current ranking
+    if(checkAdmin(update)):
+      rankingText = Kickerelo.rankingFormat(ranking, True, [userData[1]], 0)
+      # rankingText = Kickerelo.rankingFormat(ranking, False, [userData[1]], 0)
+    else:
+      rankingText = Kickerelo.rankingFormat(ranking, False, [userData[1]], 0)
+    context.bot.send_message( chat_id=chat_id,
+                              text=rankingText,
+                              parse_mode=telegram.ParseMode.HTML)
+    print("get Ranking")
+  else: notAllowed(update, context, chat_id, "get ranking")
+
+def announceRelease(update, context):
+  if(checkAdmin(update)):
+    chat_id = update.message.chat_id
+    allChats = userManagement.allChatids()
+    for chat in allChats:
+      context.bot.send_message(chat_id=chat, text=readMessages("messages/releaseNotes.txt"), parse_mode=telegram.ParseMode.MARKDOWN)
+  else: notAllowed(update, context, chat_id, "announce new release")
+
+
+##############
 updater = Updater(token, use_context=True)
 dp = updater.dispatcher
 
-#logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#                     level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
 #####################
 #
 #     General Functions
@@ -181,6 +214,7 @@ dp.add_handler(CommandHandler('help',helpText))
 dp.add_handler(CommandHandler('elo',eloInquiry))
 dp.add_handler(CommandHandler('elovon',eloInquiryFremd))
 dp.add_handler(CommandHandler('eloProgress',eloProgressInquiry))
+dp.add_handler(CommandHandler('ranking',getRanking))
 #
 #     Admin Functions
 #
@@ -188,6 +222,7 @@ dp.add_handler(CommandHandler('eloProgress',eloProgressInquiry))
 dp.add_handler(CommandHandler('newresult',newresult))
 dp.add_handler(CommandHandler('editPlayer',editPlayer))
 dp.add_handler(CommandHandler('sendUserList',sendUserList))
+dp.add_handler(CommandHandler('announceRelease',announceRelease))
 dp.add_handler(CommandHandler('bla',bla))
 updater.start_polling()
 updater.idle()

@@ -28,7 +28,7 @@ def cbc(tex, option):
 
 def callback(tex, option):
 	if option == 1:
-		Spieler = "{};{};{};{}".format(dropdowns[0][0].get(), dropdowns[1][0].get(), dropdowns[2][0].get(), dropdowns[3][0].get())
+		Spieler = "{};{};{};{};".format(dropdowns[0][0].get(), dropdowns[1][0].get(), dropdowns[2][0].get(), dropdowns[3][0].get())
 		Ergebnis_1 = "{};{}".format(dropdowns[4][0].get(), dropdowns[5][0].get())
 		Ergebnis_2 = "{};{}".format(dropdowns[6][0].get(), dropdowns[7][0].get())
 		s = "/newresult "+Spieler+Ergebnis_1+" "+Spieler+Ergebnis_2+"\n"

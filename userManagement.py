@@ -46,6 +46,21 @@ def dataByUsername(username):
 	else:
 		return data
 
+def allChatids():
+	# connect to the database
+	connection = sqlite3.connect('usersdb.db')
+	cursor=connection.cursor()
+	# get all chat_ids
+	cursor.execute("SELECT chatid FROM users WHERE chatid != ?", ("",))
+	data = cursor.fetchall()
+	data = [i[0] for i in data]
+	connection.close()
+	# return a list with all chat_ids
+	if data is None:
+		return -1
+	else:
+		return data
+
 def csvAddNewPlayer(username, name, pseudo, role, status, team):
 	newPlayerData = '"{}","{}","{}","{}","{}","{}",""\n'.format(username, name, pseudo, role, status, team)
 	with open('userlist.csv','a') as f:

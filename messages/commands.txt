@@ -1,4 +1,8 @@
 *Ich kann folgendes Machen*:
 
-/elo            -    Wie ist meine aktuelle ELO?
-/eloProgress    -    Wie entwickelte sich meine ELO in letzter Zeit?
+/help - _Befehlsliste_
+/elo - _Deine aktuelle ELO_
+/eloProgress - _Wie entwickelte sich meine ELO in letzter Zeit?_
+`/elovon Saborano` - _Aktuelle ELO von Saborano (andere nicknames gehen auch)_
+/ranking - _ELO-Rankingliste_
+

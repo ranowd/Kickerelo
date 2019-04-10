@@ -105,11 +105,11 @@ def read_playerdata(name, cursor):
     cursor.execute("SELECT match_number FROM " + name)
     res = cursor.fetchall()
     matches = [x[0] for x in res]
-    print(matches)
+    # print(matches)
     cursor.execute("SELECT elo_value FROM " + name)
     res = cursor.fetchall()
     elo = [x[0] for x in res]
-    print(elo)
+    # print(elo)
     return matches, elo
 
 
@@ -162,7 +162,7 @@ def import_match_history(cursor, connection):
 
     # analyze all matches that are new
     for row in reader:
-        print(row[0])
+        # print(row[0])
         if int(row[0]) > last_match:
             write_matchdata(cursor, connection, row)
 
@@ -185,19 +185,19 @@ def ranking():
     ranking.reverse()
     return ranking
 
-def rankingFormat(ranking, elomaster = False, highlight = [], legends = 0):
+def rankingFormat(ranking, elomaster = False, highlight = [], showLegends = False):
     i = 1
     identity = 2
     if(elomaster == True): identity = 1
-    outputStr = "Ranking:\n"
+    outputStr = "<b>Ranking:</b> \n"
     for item in ranking:
         player = userManagement.dataByName(item[1])
-        if((legends == 0) and (player[4] == "legend")):
+        if((showLegends == False) and (player[4] == "legend")):
             continue
         if(player[1] in highlight):
-            outputStr += "{}: {} - {:.2f}\n".format(i, player[identity], item[0]) #todo actual highlighting
+            outputStr += "<b>{}: {} - {:.2f}</b> \n".format(i, player[identity], item[0]) #todo actual highlighting
         else:
-            outputStr += "{}: {} - {:.2f}\n".format(i, player[identity], item[0])
+            outputStr += "{}: {} - {:.2f} \n".format(i, player[identity], item[0])
         i += 1
     return outputStr
 # if os.path.exists("./matchhistorie.csv"):
