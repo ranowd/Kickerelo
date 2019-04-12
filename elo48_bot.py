@@ -65,6 +65,17 @@ def eloInquiry(update, context):
   else:
     notAllowed(update, context, chat_id, "elo Inquiry")
 
+def statsInquiry(update, context):
+  chat_id = update.message.chat_id
+  user = update.message.from_user['username']
+  userData = userManagement.dataByUsername(user)
+  if(userData != -1):
+      playerStats = Kickerelo.getStats(userData[1])
+      context.bot.send_message(chat_id=chat_id, text="Deine stats:\n{}".format(playerStats))
+      print("Read Stats")
+  else:
+    notAllowed(update, context, chat_id, "stats Inquiry")
+
 def eloInquiryFremd(update, context):
   chat_id = update.message.chat_id
   user = update.message.from_user['username']
@@ -136,9 +147,13 @@ def sendUserList(update, context):
       notAllowed(update, context, chat_id, "send user list")
 
 def bla(update, context):
-  print(update.message.text)
-  print(context.args)
-  context.bot.send_message(chat_id=chat_id, text="Hi")
+  chat_id = update.message.chat_id
+  if(checkAdmin(update)):
+    stats = Kickerelo.getStats()
+    statsText = Kickerelo.formatStats(stats, "private")
+    context.bot.send_message(chat_id=chat_id, text=statsText, parse_mode=telegram.ParseMode.MARKDOWN)
+  # print(update.message.text)
+  # print(context.args)
 
 def newresult(update, context):
   if(checkAdmin(update)):
@@ -160,7 +175,7 @@ def newresult(update, context):
     ## Match analysis
     # elo difference
     elosDifference = [a_i - b_i for a_i, b_i in zip(elosAfter, elosBefore)] # calculate elo difference
-    elosDifferenceText = "*ELO Difference:*\n"
+    elosDifferenceText = "<b>ELO Difference:</b>\n"
     for player, diff in zip(players,elosDifference):
       elosDifferenceText += "{}: {:.2f}\n".format(player, diff)
     #ranking
