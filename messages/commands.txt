@@ -5,4 +5,6 @@
 /eloProgress - _Wie entwickelte sich meine ELO in letzter Zeit?_
 `/elovon Saborano` - _Aktuelle ELO von Saborano (andere nicknames gehen auch)_
 /ranking - _ELO-Rankingliste_
-
+/stats  - _Deine aktuellen Stats_
+`/statsvon Saborano` - _Aktuelle Stats von Saborano_
+/lastRound  - _Die Ergebnisse der letzten Runde, die du gespielt hast_

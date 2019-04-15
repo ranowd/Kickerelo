@@ -202,20 +202,31 @@ def rankingFormat(ranking, elomaster = False, highlight = [], showLegends = Fals
         i += 1
     return outputStr
 
-def getStats():
+def getGames(playerName):
+    connection = sqlite3.connect('ELO.db')
+    cursor=connection.cursor()
+    # get all games
+    cursor.execute("""  SELECT *
+                        FROM matches
+                        WHERE (player_A1 == ? OR player_A2 == ? OR player_B1 == ? OR player_B2 == ?)""", (playerName,)*4)
+    data = cursor.fetchall()
+#    data = [i[0] for i in data]
+    return data
+
+def getStats(playerName):
     # connect to the database
     connection = sqlite3.connect('ELO.db')
     cursor=connection.cursor()
     # get all lost scores
     cursor.execute("""  SELECT goals_A
                         FROM matches
-                        WHERE (player_A1 == ? OR player_A2 == ?) AND goals_A != "10" """, ("Rano_M", "Rano_M"))
+                        WHERE (player_A1 == ? OR player_A2 == ?) AND goals_A != "10" """, (playerName, playerName))
     data = cursor.fetchall()
     data = [i[0] for i in data]
     goalStats = [data]
     cursor.execute("""  SELECT goals_B
                         FROM matches
-                        WHERE (player_B1 == ? OR player_B2 == ?) AND goals_B != "10" """, ("Rano_M", "Rano_M"))
+                        WHERE (player_B1 == ? OR player_B2 == ?) AND goals_B != "10" """, (playerName, playerName))
     data = cursor.fetchall()
     data = [i[0] for i in data]
     goalStats[0] += data
@@ -223,14 +234,14 @@ def getStats():
     # get all won scores
     cursor.execute("""  SELECT goals_A
                         FROM matches
-                        WHERE (player_A1 == ? OR player_A2 == ?) AND goals_A == "10" """, ("Rano_M", "Rano_M"))
+                        WHERE (player_A1 == ? OR player_A2 == ?) AND goals_A == "10" """, (playerName, playerName))
     data = cursor.fetchall()
     data = [i[0] for i in data]
     goalStats.append(data)
 
     cursor.execute("""  SELECT goals_B
                         FROM matches
-                        WHERE (player_B1 == ? OR player_B2 == ?) AND goals_B == "10" """, ("Rano_M", "Rano_M"))
+                        WHERE (player_B1 == ? OR player_B2 == ?) AND goals_B == "10" """, (playerName, playerName))
     data = cursor.fetchall()
     data = [i[0] for i in data]
     goalStats[1]+=data
@@ -238,20 +249,20 @@ def getStats():
     # sum of goals received
     cursor.execute("""  SELECT sum(goals_B)
                         FROM matches
-                        WHERE player_A1 OR player_A2 == ? AND goals_A != "10" """, ("Rano_M",))
+                        WHERE player_A1 OR player_A2 == ? AND goals_A != "10" """, (playerName,))
     data = cursor.fetchall()
     data = data[0][0]
     goalStats.append(data)
 
     cursor.execute("""  SELECT sum(goals_A)
                         FROM matches
-                        WHERE player_B1 OR player_B2 == ? AND goals_B != "10" """, ("Rano_M",))
+                        WHERE player_B1 OR player_B2 == ? AND goals_B != "10" """, (playerName,))
     data = cursor.fetchall()
     data = data[0][0]
     goalStats[2] += data #goalStats is a list with the following structure [[goals scored in matches lost], [goals scored in matches won], sum of goals received]
     connection.close()
 
-    eloStats = read_playerdata("Rano_M", accessDatabase())
+    eloStats = read_playerdata(playerName, accessDatabase())
 
     #### Berechnung der stats
 
@@ -325,7 +336,17 @@ Durchschnitt: {:.2f}
 Median: {:.2f}
 ```""".format(*[stats.get(i)for i in ["gamesPlayed", "toreGesch", "geschKassA", "geschKassB", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
     elif(mode == "fremd"):
-        pass
+        text =  """```
+------Spielstatistik------
+Geschossen vs Kassiert: {} zu {}
+Gewinnchance: {:.2f}%\n
+------ELO------
+ZB: ELO-{}
+Max: {:.2f}
+Min: {:.2f}
+Durchschnitt: {:.2f}
+Median: {:.2f}
+```""".format(*[stats.get(i)for i in ["geschKassA", "geschKassB", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
     else: text = "Error"
     return text
 ########## MAIN ###################
@@ -352,7 +373,7 @@ def accessDatabase():
     return cur
 
 
-    #matches2plot, elo2plot = read_playerdata("Rano_M")
+    #matches2plot, elo2plot = read_playerdata(playerName)
     #plot_graph(matches2plot, elo2plot)
     #plot_fullgraph(matches2plot, elo2plot)
 

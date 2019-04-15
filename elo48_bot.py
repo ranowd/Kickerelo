@@ -65,17 +65,6 @@ def eloInquiry(update, context):
   else:
     notAllowed(update, context, chat_id, "elo Inquiry")
 
-def statsInquiry(update, context):
-  chat_id = update.message.chat_id
-  user = update.message.from_user['username']
-  userData = userManagement.dataByUsername(user)
-  if(userData != -1):
-      playerStats = Kickerelo.getStats(userData[1])
-      context.bot.send_message(chat_id=chat_id, text="Deine stats:\n{}".format(playerStats))
-      print("Read Stats")
-  else:
-    notAllowed(update, context, chat_id, "stats Inquiry")
-
 def eloInquiryFremd(update, context):
   chat_id = update.message.chat_id
   user = update.message.from_user['username']
@@ -87,6 +76,33 @@ def eloInquiryFremd(update, context):
       currentELO = Kickerelo.read_playerdata(userDataFremd[1], Kickerelo.accessDatabase())[1][-1]
       context.bot.send_message(chat_id=chat_id, text="Die aktuelle ELO von {} beträgt: {:.2f}".format(context.args[0], currentELO))
       print("Read Elo von")
+    else:
+      context.bot.send_message(chat_id=chat_id, text="User Leider nicht gefunden.")
+  else:
+    notAllowed(update, context, chat_id, "elo Inquiry fremd")
+
+def statsInquiry(update, context):
+  chat_id = update.message.chat_id
+  user = update.message.from_user['username']
+  userData = userManagement.dataByUsername(user)
+  if(userData != -1):
+      playerStats = Kickerelo.getStats(userData[1])
+      context.bot.send_message(chat_id=chat_id, text="*Deine stats*\n{}".format(Kickerelo.formatStats(playerStats,"private")), parse_mode=telegram.ParseMode.MARKDOWN)
+      print("Read Stats")
+  else:
+    notAllowed(update, context, chat_id, "stats Inquiry")
+
+def statsInquiryFremd(update, context):
+  chat_id = update.message.chat_id
+  user = update.message.from_user['username']
+  userDataRequester = userManagement.dataByUsername(user)
+  if(userDataRequester != -1):
+    userDataFremd = userManagement.dataByPseudo(context.args[0])
+    print(context.args[0])
+    if(userDataFremd != -1):
+      playerStats = Kickerelo.getStats(userDataFremd[1])
+      context.bot.send_message(chat_id=chat_id, text="*Stats von {}*\n{}".format(context.args[0], Kickerelo.formatStats(playerStats,"fremd")), parse_mode=telegram.ParseMode.MARKDOWN)
+      print("Read Stats von {}".format(context.args[0]))
     else:
       context.bot.send_message(chat_id=chat_id, text="User Leider nicht gefunden.")
   else:
@@ -106,6 +122,19 @@ def eloProgressInquiry(update, context):
       print("Elo progress")
   else:
       notAllowed(update, context, chat_id, "Own progress Inquiry")
+
+def lastRoundInquiry(update, context):
+  chat_id = update.message.chat_id
+  user = update.message.from_user['username']
+  userData = userManagement.dataByUsername(user)
+  if(userData != -1):
+      lastRound = Kickerelo.getGames(userData[1])[-2:]
+      pseudos = [userManagement.dataByName(i)[2] for i in lastRound[0][1:5]]
+      textRunde = "`{}+{} vs.\n{}+{}:\nH: {} zu {}\nR: {} zu {}`".format(pseudos[0], pseudos[1], pseudos[2], pseudos[3], lastRound[0][5], lastRound[0][6], lastRound[1][5], lastRound[1][6])
+      context.bot.send_message(chat_id=chat_id, text="*Letzte Runde*\n{}".format(textRunde), parse_mode=telegram.ParseMode.MARKDOWN)
+      print("Get last round")
+  else:
+    notAllowed(update, context, chat_id, "stats Inquiry")
 
 def checkAdmin(update):
   user = update.message.from_user['username']
@@ -230,6 +259,9 @@ dp.add_handler(CommandHandler('elo',eloInquiry))
 dp.add_handler(CommandHandler('elovon',eloInquiryFremd))
 dp.add_handler(CommandHandler('eloProgress',eloProgressInquiry))
 dp.add_handler(CommandHandler('ranking',getRanking))
+dp.add_handler(CommandHandler('stats',statsInquiry))
+dp.add_handler(CommandHandler('statsvon',statsInquiryFremd))
+dp.add_handler(CommandHandler('lastRound',lastRoundInquiry))
 #
 #     Admin Functions
 #
@@ -238,7 +270,7 @@ dp.add_handler(CommandHandler('newresult',newresult))
 dp.add_handler(CommandHandler('editPlayer',editPlayer))
 dp.add_handler(CommandHandler('sendUserList',sendUserList))
 dp.add_handler(CommandHandler('announceRelease',announceRelease))
-dp.add_handler(CommandHandler('bla',bla))
+dp.add_handler(CommandHandler('bla',lastRoundInquiry))
 updater.start_polling()
 updater.idle()
 
