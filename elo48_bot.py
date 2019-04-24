@@ -128,9 +128,12 @@ def lastRoundInquiry(update, context):
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
   if(userData != -1):
+      lastThreeELOs = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())[1][-3:]
+      diff1 = lastThreeELOs[1] - lastThreeELOs[0]
+      diff2 = lastThreeELOs[2] - lastThreeELOs[1]
       lastRound = Kickerelo.getGames(userData[1])[-2:]
-      pseudos = [userManagement.dataByName(i)[2] for i in lastRound[0][1:5]]
-      textRunde = "`{}+{} vs.\n{}+{}:\nH: {} zu {}\nR: {} zu {}`".format(pseudos[0], pseudos[1], pseudos[2], pseudos[3], lastRound[0][5], lastRound[0][6], lastRound[1][5], lastRound[1][6])
+      pseudos = [userManagement.dataByName(i)[2] if "anon" not in userManagement.dataByName(i)[2] else "anon" for i in lastRound[0][1:5]]
+      textRunde = "`{}+{} vs.\n{}+{}:\nH: {} zu {} ({:.2f})\nR: {} zu {} ({:.2f})`".format(pseudos[0], pseudos[1], pseudos[2], pseudos[3], lastRound[0][5], lastRound[0][6], diff1, lastRound[1][5], lastRound[1][6], diff2)
       context.bot.send_message(chat_id=chat_id, text="*Letzte Runde*\n{}".format(textRunde), parse_mode=telegram.ParseMode.MARKDOWN)
       print("Get last round")
   else:

@@ -196,7 +196,9 @@ def rankingFormat(ranking, elomaster = False, highlight = [], showLegends = Fals
         if((showLegends == False) and (player[4] == "legend")):
             continue
         if(player[1] in highlight):
-            outputStr += "<b>{}: {} - {:.2f}</b> \n".format(i, player[identity], item[0]) #todo actual highlighting
+            outputStr += "<b>{}: {} - {:.2f}</b> \n".format(i, player[identity], item[0]) #highlighting
+        elif("anon" in player[identity]):
+            outputStr += "{}: {} - {:.2f} \n".format(i, "anon", item[0])
         else:
             outputStr += "{}: {} - {:.2f} \n".format(i, player[identity], item[0])
         i += 1
