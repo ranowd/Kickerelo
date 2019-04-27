@@ -186,14 +186,14 @@ def ranking():
     ranking.reverse()
     return ranking
 
-def rankingFormat(ranking, elomaster = False, highlight = [], showLegends = False):
+def rankingFormat(ranking, elomaster = False, highlight = [], showLegends = False, showBeginners = False):
     i = 1
     identity = 2
     if(elomaster == True): identity = 1
     outputStr = "<b>Ranking:</b> \n"
     for item in ranking:
         player = userManagement.dataByName(item[1])
-        if((showLegends == False) and (player[4] == "legend")):
+        if(((showLegends == False) and (player[4] == "legend")) or ((showBeginners == False) and (len(getGames(item[1])) < 15))):
             continue
         if(player[1] in highlight):
             outputStr += "<b>{}: {} - {:.2f}</b> \n".format(i, player[identity], item[0]) #highlighting
