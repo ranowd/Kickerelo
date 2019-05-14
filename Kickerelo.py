@@ -52,9 +52,11 @@ def elo_extract(players):
     cur = connection.cursor()
     elos = []
     for player in players:
-        cur.execute("SELECT elo_value FROM " + player + " WHERE match_number = (SELECT max(match_number) FROM " + player + ")")
-        read_value = cur.fetchall()
-        elos.append(read_value[0][0])
+        try:
+            cur.execute("SELECT elo_value FROM " + player + " WHERE match_number = (SELECT max(match_number) FROM " + player + ")")
+            read_value = cur.fetchall()
+            elos.append(read_value[0][0])
+        except:elos.append(100.00) # assume that players not in the list are new and have 100.00 ELO
     return elos
 
 
