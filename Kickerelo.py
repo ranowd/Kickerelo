@@ -132,23 +132,29 @@ def plot_fullgraph(x, y):
             y_curr = y[x_curr]
         y_full.append(y_curr)
     plt.plot(x_full, y_full)
-    plt.savefig("elo_plot.png", dpi=100)
+    plt.xlabel('Spielnummer')
+    plt.ylabel('ELO')
+    plt.savefig("elo_plot.png", bbox_inches='tight', dpi=100)
     plt.clf()
 
-def plotGameGraph(x, y):
-    lim = max(x)
-    x_full = [[], [], [], []]
-    y_full = [[], [], [], []]
+def plotGameGraph(x, y, names):
+    lim = max(max(x))
+    x_full = [[] for i in x]
+    y_full = [[] for i in x]
     y_curr = 100
-    for i in range(4):
-        for k in range(0, lim+1):
-            x_full.append(k)
-            if k in x:
-                x_curr = x.index(k)
-                y_curr = y[x_curr]
-            y_full.append(y_curr)
-    plt.plot(x_full, y_full)
-    plt.savefig("elo_plot.png", dpi=100)
+    for i in range(len(x_full)):
+        for k in range(min(min(x)), lim+1):
+            x_full[i].append(k)
+            if k in x[i]:
+                x_curr = x[i].index(k)
+                y_curr = y[i][x_curr]
+            y_full[i].append(y_curr)
+    for i in range(len(x_full)):
+        plt.plot(x_full[i], y_full[i], label= names[i])
+    plt.xlabel('Spielnummer')
+    plt.ylabel('ELO')
+    plt.legend()
+    plt.savefig("elo_plot.png", bbox_inches='tight', dpi=100)
     plt.clf()
 
 # import matches from match_history.csv
