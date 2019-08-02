@@ -214,9 +214,19 @@ def newresult(update, context):
     ranking = Kickerelo.ranking() # get current ranking
     rankingText = Kickerelo.rankingFormat(ranking, True, players, 0)
     #todo match analysis: graphs with progress
+    graphData = [[],[],[]]
+    for person in players:
+      ELOdata = Kickerelo.read_playerdata(person, Kickerelo.accessDatabase())
+      graphData[0].append(ELOdata[0][-30:])
+      graphData[1].append(ELOdata[1][-30:])
+      graphData[2].append(person)
+    Kickerelo.plotGameGraph(graphData[0], graphData[1], graphData[2])
     #todo print match analysis: elo difference, ranking, graphs with progress
     context.bot.send_message(chat_id=chat_id, text=rankingText, parse_mode=telegram.ParseMode.HTML)
     context.bot.send_message(chat_id=chat_id, text=elosDifferenceText, parse_mode=telegram.ParseMode.HTML)
+    context.bot.send_photo(chat_id=chat_id, photo = open('elo_plot.png', 'rb'))
+    time.sleep(0.5)
+    os.remove("elo_plot.png")
     #todo send the analysis results to all the players
   else: notAllowed(update, context, chat_id, "Add new results")
 
