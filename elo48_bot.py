@@ -8,6 +8,7 @@ import Kickerelo
 import time
 import os
 from datetime import datetime
+from requests import get
 
 def readMessages(filePath):
   with open(filePath, encoding='utf8') as f:
@@ -255,6 +256,12 @@ def announceRelease(update, context):
       context.bot.send_message(chat_id=chat, text=readMessages("messages/releaseNotes.txt"), parse_mode=telegram.ParseMode.MARKDOWN)
   else: notAllowed(update, context, chat_id, "announce new release")
 
+def ipFetch(update, context):
+  if(checkAdmin(update)):
+    chat_id = update.message.chat_id
+    ip = get('https://api.ipify.org').text
+    context.bot.send_message( chat_id=chat_id, text=ip)
+  else: notAllowed(update, context, chat_id, "Fetch the ip")
 
 ##############
 updater = Updater(token, use_context=True)
@@ -283,6 +290,7 @@ dp.add_handler(CommandHandler('newresult',newresult))
 dp.add_handler(CommandHandler('editPlayer',editPlayer))
 dp.add_handler(CommandHandler('sendUserList',sendUserList))
 dp.add_handler(CommandHandler('announceRelease',announceRelease))
+dp.add_handler(CommandHandler('ip',ipFetch))
 dp.add_handler(CommandHandler('bla',lastRoundInquiry))
 updater.start_polling()
 updater.idle()
