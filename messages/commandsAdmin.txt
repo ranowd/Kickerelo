@@ -1,0 +1,7 @@
+*Als Admin kannst du auch*:
+
+/newresult player1;player2;player3;player4;10;10 player1;player2;player3;player4;10;10
+/editPlayer username;player;pseudo;role;status;team - entries with "-1" are ignored
+/sendUserList   -    Send a .py file with the users
+`/announceRelease`    -   Send a global message announcing a new release
+/ip -   Fetch the current ip of the bot
