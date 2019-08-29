@@ -10,11 +10,13 @@ import os
 from datetime import datetime
 from requests import get
 
+## General
 def readMessages(filePath):
   with open(filePath, encoding='utf8') as f:
     text = f.read()
     return text
 
+## User Basic interaction
 def start(update, context):
   chat_id = update.message.chat_id
   user = update.message.from_user['username']
@@ -38,22 +40,6 @@ def helpText(update, context):
   else:
     notAllowed(update, context, chat_id, "help")
   if(checkAdmin(update)):context.bot.send_message(chat_id=chat_id, text=readMessages("messages/commandsAdmin.txt"), parse_mode=telegram.ParseMode.MARKDOWN)
-
-def notAllowed(update, context, chat_id, logmessage):
-  print(elomaster)
-  automessage = "Leider ist dein user nicht freigeschaltet, kontaktiere bitte ELO business associate @{}".format(elomaster)
-  #print(automessage)
-  context.bot.send_message(chat_id=chat_id, text=automessage)
-  now = datetime.now()
-  date_time = now.strftime("%d/%m/%Y - %H:%M:%S")
-  username = update.message.chat.username
-  first = update.message.chat.first_name
-  last = update.message.chat.last_name
-  logText = "{}: {} {}, {}, {}\n".format(date_time, first, last, username, logmessage)
-  print(logText)
-  with open('violations_log.csv','a') as f:
-    f.write(logText)
-    f.close()
 
 def eloInquiry(update, context):
   chat_id = update.message.chat_id
@@ -128,65 +114,43 @@ def lastRoundInquiry(update, context):
   chat_id = update.message.chat_id
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
+  rounds = 5
+  textAlle = ""
   if(userData != -1):
-      lastThreeELOs = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())[1][-3:]
-      diff1 = lastThreeELOs[1] - lastThreeELOs[0]
-      diff2 = lastThreeELOs[2] - lastThreeELOs[1]
-      lastRound = Kickerelo.getGames(userData[1])[-2:]
-      pseudos = [userManagement.dataByName(i)[2] if "anon" not in userManagement.dataByName(i)[2] else "anon" for i in lastRound[0][1:5]]
-      textRunde = "`{}+{} vs.\n{}+{}:\nH: {} zu {} ({:.2f})\nR: {} zu {} ({:.2f})`".format(pseudos[0], pseudos[1], pseudos[2], pseudos[3], lastRound[0][5], lastRound[0][6], diff1, lastRound[1][5], lastRound[1][6], diff2)
-      context.bot.send_message(chat_id=chat_id, text="*Letzte Runde*\n{}".format(textRunde), parse_mode=telegram.ParseMode.MARKDOWN)
+      lastELOs = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())[1][-(1 + rounds*2):]
+
+      for i in range(1,rounds+1):
+        lastThreeELOs = lastELOs[-3:]
+        lastELOs = lastELOs[:-2]
+        diff1 = lastThreeELOs[1] - lastThreeELOs[0]
+        diff2 = lastThreeELOs[2] - lastThreeELOs[1]
+        lastRound = Kickerelo.getGames(userData[1])[-2*i:]
+        pseudos = [userManagement.dataByName(i)[2] if "anon" not in userManagement.dataByName(i)[2] else "anon" for i in lastRound[0][1:5]]
+        textRunde = "`{}+{} vs.\n{}+{}:\nH: {} zu {} ({:.2f})\nR: {} zu {} ({:.2f})`\n".format(pseudos[0], pseudos[1], pseudos[2], pseudos[3], lastRound[0][5], lastRound[0][6], diff1, lastRound[1][5], lastRound[1][6], diff2)
+        textAlle += textRunde
+      context.bot.send_message(chat_id=chat_id, text="*Letzte Runde*\n{}".format(textAlle), parse_mode=telegram.ParseMode.MARKDOWN)
       print("Get last round")
   else:
     notAllowed(update, context, chat_id, "stats Inquiry")
 
-def checkAdmin(update):
+def getRanking(update, context):
+  chat_id = update.message.chat_id
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
-  if(userData[0] == elomaster): return True
-  else: return False
+  if(userData != -1):
+    ranking = Kickerelo.ranking() # get current ranking
+    if(checkAdmin(update)):
+      rankingText = Kickerelo.rankingFormat(ranking, True, [userData[1]], 0)
+      # rankingText = Kickerelo.rankingFormat(ranking, False, [userData[1]], 0)
+    else:
+      rankingText = Kickerelo.rankingFormat(ranking, False, [userData[1]], 0)
+    context.bot.send_message( chat_id=chat_id,
+                              text=rankingText,
+                              parse_mode=telegram.ParseMode.HTML)
+    print("get Ranking")
+  else: notAllowed(update, context, chat_id, "get ranking")
 
-def updateUserDatabase(update, context):
-  chat_id = update.message.chat_id
-  if(checkAdmin(update)):
-    userManagement.csvUpdatePlayerDb()
-    context.bot.send_message(chat_id=chat_id, text="Aktualisiert!")
-  else:
-      notAllowed(update, context, chat_id, "Update user Database")
-
-def editPlayer(update, context):
-  chat_id = update.message.chat_id
-  if(checkAdmin(update)):
-    userDataList = context.args[0].split(";")
-    userDataList.append('-1')
-    name = userDataList[1]
-    if(len(userDataList)==7):
-      userManagement.editSpecificPlayer(name, userDataList)
-      context.bot.send_message(chat_id=chat_id, text="Spieler wurde aktualisiert.")
-      userManagement.csvUpdatePlayerDb()
-    else: context.bot.send_message(chat_id=chat_id, text="Geht nicht, falsche Eingabe.")
-  else:
-      notAllowed(update, context, chat_id, "send user list")
-
-def sendUserList(update, context):
-  chat_id = update.message.chat_id
-  if(checkAdmin(update)):
-    userManagement.createUserListFile()
-    context.bot.send_document(chat_id=chat_id, document=open('players.py','rb'))
-    try:
-      os.remove('players.py')
-    except:pass
-  else:
-      notAllowed(update, context, chat_id, "send user list")
-
-def bla(update, context):
-  chat_id = update.message.chat_id
-  if(checkAdmin(update)):
-    stats = Kickerelo.getStats()
-    statsText = Kickerelo.formatStats(stats, "private")
-    context.bot.send_message(chat_id=chat_id, text=statsText, parse_mode=telegram.ParseMode.MARKDOWN)
-  # print(update.message.text)
-  # print(context.args)
+## Key User Interactions
 
 def newresult(update, context):
   if(checkAdmin(update)):
@@ -231,23 +195,63 @@ def newresult(update, context):
     #todo send the analysis results to all the players
   else: notAllowed(update, context, chat_id, "Add new results")
 
-def getRanking(update, context):
-  chat_id = update.message.chat_id
+## Permissions and User Management
+def notAllowed(update, context, chat_id, logmessage):
+  print(elomaster)
+  automessage = "Leider ist dein user nicht freigeschaltet, kontaktiere bitte ELO business associate @{}".format(elomaster)
+  #print(automessage)
+  context.bot.send_message(chat_id=chat_id, text=automessage)
+  now = datetime.now()
+  date_time = now.strftime("%d/%m/%Y - %H:%M:%S")
+  username = update.message.chat.username
+  first = update.message.chat.first_name
+  last = update.message.chat.last_name
+  logText = "{}: {} {}, {}, {}\n".format(date_time, first, last, username, logmessage)
+  print(logText)
+  with open('violations_log.csv','a') as f:
+    f.write(logText)
+    f.close()
+
+def checkAdmin(update):
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
-  if(userData != -1):
-    ranking = Kickerelo.ranking() # get current ranking
-    if(checkAdmin(update)):
-      rankingText = Kickerelo.rankingFormat(ranking, True, [userData[1]], 0)
-      # rankingText = Kickerelo.rankingFormat(ranking, False, [userData[1]], 0)
-    else:
-      rankingText = Kickerelo.rankingFormat(ranking, False, [userData[1]], 0)
-    context.bot.send_message( chat_id=chat_id,
-                              text=rankingText,
-                              parse_mode=telegram.ParseMode.HTML)
-    print("get Ranking")
-  else: notAllowed(update, context, chat_id, "get ranking")
+  if(userData[0] == elomaster): return True
+  else: return False
 
+def updateUserDatabase(update, context):
+  chat_id = update.message.chat_id
+  if(checkAdmin(update)):
+    userManagement.csvUpdatePlayerDb()
+    context.bot.send_message(chat_id=chat_id, text="Aktualisiert!")
+  else:
+      notAllowed(update, context, chat_id, "Update user Database")
+
+def editPlayer(update, context):
+  chat_id = update.message.chat_id
+  if(checkAdmin(update)):
+    userDataList = context.args[0].split(";")
+    userDataList.append('-1')
+    name = userDataList[1]
+    if(len(userDataList)==7):
+      userManagement.editSpecificPlayer(name, userDataList)
+      context.bot.send_message(chat_id=chat_id, text="Spieler wurde aktualisiert.")
+      userManagement.csvUpdatePlayerDb()
+    else: context.bot.send_message(chat_id=chat_id, text="Geht nicht, falsche Eingabe.")
+  else:
+      notAllowed(update, context, chat_id, "send user list")
+
+def sendUserList(update, context):
+  chat_id = update.message.chat_id
+  if(checkAdmin(update)):
+    userManagement.createUserListFile()
+    context.bot.send_document(chat_id=chat_id, document=open('players.py','rb'))
+    try:
+      os.remove('players.py')
+    except:pass
+  else:
+      notAllowed(update, context, chat_id, "send user list")
+
+## Dev Functions
 def announceRelease(update, context):
   if(checkAdmin(update)):
     chat_id = update.message.chat_id
@@ -271,7 +275,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 #####################
 #
-#     General Functions
+#     General User Functions
 #
 dp.add_handler(CommandHandler('start',start))
 dp.add_handler(CommandHandler('help',helpText))
@@ -291,7 +295,8 @@ dp.add_handler(CommandHandler('editPlayer',editPlayer))
 dp.add_handler(CommandHandler('sendUserList',sendUserList))
 dp.add_handler(CommandHandler('announceRelease',announceRelease))
 dp.add_handler(CommandHandler('ip',ipFetch))
-dp.add_handler(CommandHandler('bla',lastRoundInquiry))
+
+
 updater.start_polling()
 updater.idle()
 
