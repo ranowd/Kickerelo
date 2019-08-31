@@ -114,24 +114,32 @@ def lastRoundInquiry(update, context):
   chat_id = update.message.chat_id
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
-  rounds = 5
-  textAlle = ""
   if(userData != -1):
-      lastELOs = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())[1][-(1 + rounds*2):]
+    try:
+      r = int(context.args[0])
+    except: r = 1
 
-      for i in range(1,rounds+1):
+    if(r > 0) & (r < 11):
+      rounds = r
+    else:
+      rounds = 1
+
+    textAlle = ""
+    lastELOs = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())[1][-(1 + rounds*2):]
+
+    for i in range(1,rounds+1):
         lastThreeELOs = lastELOs[-3:]
         lastELOs = lastELOs[:-2]
         diff1 = lastThreeELOs[1] - lastThreeELOs[0]
         diff2 = lastThreeELOs[2] - lastThreeELOs[1]
         lastRound = Kickerelo.getGames(userData[1])[-2*i:]
-        pseudos = [userManagement.dataByName(i)[2] if "anon" not in userManagement.dataByName(i)[2] else "anon" for i in lastRound[0][1:5]]
+        pseudos = [userManagement.dataByName(idx)[2] if "anon" not in userManagement.dataByName(idx)[2] else "anon" for idx in lastRound[0][1:5]]
         textRunde = "`{}+{} vs.\n{}+{}:\nH: {} zu {} ({:.2f})\nR: {} zu {} ({:.2f})`\n".format(pseudos[0], pseudos[1], pseudos[2], pseudos[3], lastRound[0][5], lastRound[0][6], diff1, lastRound[1][5], lastRound[1][6], diff2)
         textAlle += textRunde
-      context.bot.send_message(chat_id=chat_id, text="*Letzte Runde*\n{}".format(textAlle), parse_mode=telegram.ParseMode.MARKDOWN)
-      print("Get last round")
+    context.bot.send_message(chat_id=chat_id, text="*Letzte Runde*\n{}".format(textAlle), parse_mode=telegram.ParseMode.MARKDOWN)
+    print("Get last round")
   else:
-    notAllowed(update, context, chat_id, "stats Inquiry")
+    notAllowed(update, context, chat_id, "lastRound Inquiry")
 
 def getRanking(update, context):
   chat_id = update.message.chat_id
@@ -266,6 +274,10 @@ def ipFetch(update, context):
     ip = get('https://api.ipify.org').text
     context.bot.send_message( chat_id=chat_id, text=ip)
   else: notAllowed(update, context, chat_id, "Fetch the ip")
+
+def startUpFunctions():
+    Kickerelo.updateDatabase()
+
 
 ##############
 updater = Updater(token, use_context=True)
