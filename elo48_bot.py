@@ -276,7 +276,7 @@ def ipFetch(update, context):
   else: notAllowed(update, context, chat_id, "Fetch the ip")
 
 def startUpFunctions():
-    Kickerelo.updateDatabase()
+#    Kickerelo.updateDatabase()
 
 
 ##############
