@@ -7,6 +7,7 @@ import userManagement
 import Kickerelo
 import time
 import os
+import pandas as pd
 from datetime import datetime
 from requests import get
 

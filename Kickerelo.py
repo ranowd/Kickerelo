@@ -6,6 +6,7 @@ import Elo_Algorythm as elo
 import userManagement
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import pandas as pd
 from matplotlib import style
 from statistics import mean, median
 style.use("fivethirtyeight")
@@ -240,6 +241,113 @@ def getStats(playerName):
     data = cursor.fetchall()
     data = [i[0] for i in data]
     goalStats[0] += data
+
+    # get all won scores
+    cursor.execute("""  SELECT goals_A
+                        FROM matches
+                        WHERE (player_A1 == ? OR player_A2 == ?) AND goals_A == "10" """, (playerName, playerName))
+    data = cursor.fetchall()
+    data = [i[0] for i in data]
+    goalStats.append(data)
+
+    cursor.execute("""  SELECT goals_B
+                        FROM matches
+                        WHERE (player_B1 == ? OR player_B2 == ?) AND goals_B == "10" """, (playerName, playerName))
+    data = cursor.fetchall()
+    data = [i[0] for i in data]
+    goalStats[1]+=data
+
+    # sum of goals received
+    cursor.execute("""  SELECT sum(goals_B)
+                        FROM matches
+                        WHERE player_A1 OR player_A2 == ? AND goals_A != "10" """, (playerName,))
+    data = cursor.fetchall()
+    data = data[0][0]
+    goalStats.append(data)
+
+    cursor.execute("""  SELECT sum(goals_A)
+                        FROM matches
+                        WHERE player_B1 OR player_B2 == ? AND goals_B != "10" """, (playerName,))
+    data = cursor.fetchall()
+    data = data[0][0]
+    goalStats[2] += data #goalStats is a list with the following structure [[goals scored in matches lost], [goals scored in matches won], sum of goals received]
+    connection.close()
+
+    eloStats = read_playerdata(playerName, accessDatabase())
+
+    #### Berechnung der stats
+
+    #Define the Zielband
+    nowElo = eloStats[1][-1]
+    grenze = 70
+    zielBand = 0
+    if nowElo < grenze:
+        pass
+    else:
+        while(True):
+            if (int(nowElo) in range(grenze, grenze+10)):
+                zielBand += 1
+                break
+            else:
+                zielBand += 1
+                grenze+=10
+
+    #Rest of the stats
+    gamesPlayed = len(eloStats[0])-1
+    maxElo = max(eloStats[1])
+    minElo = min(eloStats[1])
+    meanElo = mean(eloStats[1])
+    medianElo = median(eloStats[1])
+
+    toreGesch = sum(goalStats[0] + goalStats[1])
+    toreKass = goalStats[2]
+    torDifferenz = toreGesch-toreKass
+    geschKass = toreGesch/toreKass
+    if geschKass > 1:
+        geschKassA = round(geschKass)
+        geschKassB = 1
+    else:
+        geschKassA = 1
+        geschKassB = round(1/geschKass)
+
+    gewinnChance = (len(goalStats[1])/gamesPlayed)*100
+
+    statsDict = {   "gamesPlayed": gamesPlayed,
+                    "maxElo": maxElo,
+                    "minElo": minElo,
+                    "meanElo": meanElo,
+                    "medianElo": medianElo,
+                    "toreGesch": toreGesch,
+                    "toreKass": toreKass,
+                    "torDifferenz": torDifferenz,
+                    "geschKassA": geschKassA,
+                    "geschKassB": geschKassB,
+                    "zielBand": zielBand,
+                    "gewinnChance": gewinnChance}
+
+    ### Weitere Ideen
+    # Längste Siegesserie
+    # Lieblingspartner
+    # Lieblingsgegner
+    return statsDict
+
+def getStatsP(playerName):
+    # connect to the database
+    connection = sqlite3.connect('ELO.db')
+    cursor=connection.cursor()
+    # fetch all matches as dataframe
+    df = pd.read_sql_query("SELECT * FROM matches", connection).drop(["match_number"], axis=1)
+
+    # filter matches of a specific player
+    df = df[(df == playerName).any(axis = 1)]
+
+    # Rearrange the the columns, so that the filtered player is always "player A1"
+    df.loc[df['player_A2'] == playerName, ['player_A1', 'player_A2']] = df.loc[df['player_A2'] == playerName, ['player_A2', 'player_A1']].values
+    df.loc[df['player_B2'] == playerName, ['player_B1', 'player_B2']] = df.loc[df['player_B2'] == playerName, ['player_B2', 'player_B1']].values
+    df.loc[df['player_B1'] == playerName, ['player_A1', 'player_A2', 'player_B1', 'player_B2', 'goals_A', 'goals_B']] = df.loc[df['player_B1'] == playerName, ['player_B1', 'player_B2', 'player_A1', 'player_A2', 'goals_B', 'goals_A']].values
+
+    # filter all the matches that were won
+    won = df[df['goals_A']==10]
 
     # get all won scores
     cursor.execute("""  SELECT goals_A
