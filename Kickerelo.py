@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
 from matplotlib import style
-from statistics import mean, median
 style.use("fivethirtyeight")
 
 
@@ -202,7 +201,7 @@ def rankingFormat(ranking, elomaster = False, highlight = [], showLegends = Fals
     outputStr = "<b>Ranking:</b> \n"
     for item in ranking:
         player = userManagement.dataByName(item[1])
-        if(((showLegends == False) and (player[4] == "legend")) or ((showBeginners == False) and (len(getGames(item[1])) < 15))):
+        if(((showLegends == False) and (player[4] == "legend")) or ((showBeginners == False) and (getGames(item[1]).count()[0] < 15))):
             continue
         if(player[1] in highlight):
             outputStr += "<b>{}: {} - {:.2f}</b> \n".format(i, player[identity], item[0]) #highlighting
@@ -214,127 +213,10 @@ def rankingFormat(ranking, elomaster = False, highlight = [], showLegends = Fals
     return outputStr
 
 def getGames(playerName):
-    connection = sqlite3.connect('ELO.db')
-    cursor=connection.cursor()
-    # get all games
-    cursor.execute("""  SELECT *
-                        FROM matches
-                        WHERE (player_A1 == ? OR player_A2 == ? OR player_B1 == ? OR player_B2 == ?)""", (playerName,)*4)
-    data = cursor.fetchall()
-#    data = [i[0] for i in data]
-    return data
-
-def getStats(playerName):
     # connect to the database
     connection = sqlite3.connect('ELO.db')
     cursor=connection.cursor()
-    # get all lost scores
-    cursor.execute("""  SELECT goals_A
-                        FROM matches
-                        WHERE (player_A1 == ? OR player_A2 == ?) AND goals_A != "10" """, (playerName, playerName))
-    data = cursor.fetchall()
-    data = [i[0] for i in data]
-    goalStats = [data]
-    cursor.execute("""  SELECT goals_B
-                        FROM matches
-                        WHERE (player_B1 == ? OR player_B2 == ?) AND goals_B != "10" """, (playerName, playerName))
-    data = cursor.fetchall()
-    data = [i[0] for i in data]
-    goalStats[0] += data
 
-    # get all won scores
-    cursor.execute("""  SELECT goals_A
-                        FROM matches
-                        WHERE (player_A1 == ? OR player_A2 == ?) AND goals_A == "10" """, (playerName, playerName))
-    data = cursor.fetchall()
-    data = [i[0] for i in data]
-    goalStats.append(data)
-
-    cursor.execute("""  SELECT goals_B
-                        FROM matches
-                        WHERE (player_B1 == ? OR player_B2 == ?) AND goals_B == "10" """, (playerName, playerName))
-    data = cursor.fetchall()
-    data = [i[0] for i in data]
-    goalStats[1]+=data
-
-    # sum of goals received
-    cursor.execute("""  SELECT sum(goals_B)
-                        FROM matches
-                        WHERE player_A1 OR player_A2 == ? AND goals_A != "10" """, (playerName,))
-    data = cursor.fetchall()
-    data = data[0][0]
-    goalStats.append(data)
-
-    cursor.execute("""  SELECT sum(goals_A)
-                        FROM matches
-                        WHERE player_B1 OR player_B2 == ? AND goals_B != "10" """, (playerName,))
-    data = cursor.fetchall()
-    data = data[0][0]
-    goalStats[2] += data #goalStats is a list with the following structure [[goals scored in matches lost], [goals scored in matches won], sum of goals received]
-    connection.close()
-
-    eloStats = read_playerdata(playerName, accessDatabase())
-
-    #### Berechnung der stats
-
-    #Define the Zielband
-    nowElo = eloStats[1][-1]
-    grenze = 70
-    zielBand = 0
-    if nowElo < grenze:
-        pass
-    else:
-        while(True):
-            if (int(nowElo) in range(grenze, grenze+10)):
-                zielBand += 1
-                break
-            else:
-                zielBand += 1
-                grenze+=10
-
-    #Rest of the stats
-    gamesPlayed = len(eloStats[0])-1
-    maxElo = max(eloStats[1])
-    minElo = min(eloStats[1])
-    meanElo = mean(eloStats[1])
-    medianElo = median(eloStats[1])
-
-    toreGesch = sum(goalStats[0] + goalStats[1])
-    toreKass = goalStats[2]
-    torDifferenz = toreGesch-toreKass
-    geschKass = toreGesch/toreKass
-    if geschKass > 1:
-        geschKassA = round(geschKass)
-        geschKassB = 1
-    else:
-        geschKassA = 1
-        geschKassB = round(1/geschKass)
-
-    gewinnChance = (len(goalStats[1])/gamesPlayed)*100
-
-    statsDict = {   "gamesPlayed": gamesPlayed,
-                    "maxElo": maxElo,
-                    "minElo": minElo,
-                    "meanElo": meanElo,
-                    "medianElo": medianElo,
-                    "toreGesch": toreGesch,
-                    "toreKass": toreKass,
-                    "torDifferenz": torDifferenz,
-                    "geschKassA": geschKassA,
-                    "geschKassB": geschKassB,
-                    "zielBand": zielBand,
-                    "gewinnChance": gewinnChance}
-
-    ### Weitere Ideen
-    # Längste Siegesserie
-    # Lieblingspartner
-    # Lieblingsgegner
-    return statsDict
-
-def getStatsP(playerName):
-    # connect to the database
-    connection = sqlite3.connect('ELO.db')
-    cursor=connection.cursor()
     # fetch all matches as dataframe
     df = pd.read_sql_query("SELECT * FROM matches", connection).drop(["match_number"], axis=1)
 
@@ -346,46 +228,56 @@ def getStatsP(playerName):
     df.loc[df['player_B2'] == playerName, ['player_B1', 'player_B2']] = df.loc[df['player_B2'] == playerName, ['player_B2', 'player_B1']].values
     df.loc[df['player_B1'] == playerName, ['player_A1', 'player_A2', 'player_B1', 'player_B2', 'goals_A', 'goals_B']] = df.loc[df['player_B1'] == playerName, ['player_B1', 'player_B2', 'player_A1', 'player_A2', 'goals_B', 'goals_A']].values
 
-    # filter all the matches that were won
-    won = df[df['goals_A']==10]
-
-    # get all won scores
-    cursor.execute("""  SELECT goals_A
-                        FROM matches
-                        WHERE (player_A1 == ? OR player_A2 == ?) AND goals_A == "10" """, (playerName, playerName))
-    data = cursor.fetchall()
-    data = [i[0] for i in data]
-    goalStats.append(data)
-
-    cursor.execute("""  SELECT goals_B
-                        FROM matches
-                        WHERE (player_B1 == ? OR player_B2 == ?) AND goals_B == "10" """, (playerName, playerName))
-    data = cursor.fetchall()
-    data = [i[0] for i in data]
-    goalStats[1]+=data
-
-    # sum of goals received
-    cursor.execute("""  SELECT sum(goals_B)
-                        FROM matches
-                        WHERE player_A1 OR player_A2 == ? AND goals_A != "10" """, (playerName,))
-    data = cursor.fetchall()
-    data = data[0][0]
-    goalStats.append(data)
-
-    cursor.execute("""  SELECT sum(goals_A)
-                        FROM matches
-                        WHERE player_B1 OR player_B2 == ? AND goals_B != "10" """, (playerName,))
-    data = cursor.fetchall()
-    data = data[0][0]
-    goalStats[2] += data #goalStats is a list with the following structure [[goals scored in matches lost], [goals scored in matches won], sum of goals received]
     connection.close()
 
-    eloStats = read_playerdata(playerName, accessDatabase())
+    return df
+
+def getELOs(playerName):
+    # connect to the database
+    connection = sqlite3.connect('ELO.db')
+    cursor=connection.cursor()
+
+    # fetch elo entries for a specific player
+    df = pd.read_sql_query("SELECT match_number, elo_value FROM " + playerName, connection).set_index("match_number", drop=True)['elo_value']
+
+    connection.close()
+
+    return df
+
+def getStats(playerName):
+
+    # fetch all matches and elo entries as dataframes
+    df = getGames(playerName)
+    df_elo = getELOs(playerName)
 
     #### Berechnung der stats
 
+    #Elo stats
+    maxElo = df_elo.max()
+    minElo = df_elo.min()
+    meanElo = df_elo.mean()
+    medianElo = df_elo.median()
+
+    #Games stats
+    gamesPlayed = df.count()[0]
+    wingman = df['player_A2'].value_counts().idxmax()
+    nemesis = df['player_B1'].append(df['player_B2']).value_counts().idxmax()
+    gewinnChance = ((df['goals_A']==10).sum()/(df['goals_A']==10).count())*100
+    toreGesch = df["goals_A"].sum()
+    toreKass = df["goals_B"].sum()
+    torDifferenz = toreGesch-toreKass
+
+    #Define the toreGesch/toreKass ratio
+    geschKass = toreGesch/toreKass
+    if geschKass > 1:
+        geschKassA = round(geschKass, 1)
+        geschKassB = 1
+    else:
+        geschKassA = 1
+        geschKassB = round(1/geschKass, 1)
+
     #Define the Zielband
-    nowElo = eloStats[1][-1]
+    nowElo = df_elo.iloc[-1]
     grenze = 70
     zielBand = 0
     if nowElo < grenze:
@@ -398,27 +290,7 @@ def getStatsP(playerName):
             else:
                 zielBand += 1
                 grenze+=10
-
-    #Rest of the stats
-    gamesPlayed = len(eloStats[0])-1
-    maxElo = max(eloStats[1])
-    minElo = min(eloStats[1])
-    meanElo = mean(eloStats[1])
-    medianElo = median(eloStats[1])
-
-    toreGesch = sum(goalStats[0] + goalStats[1])
-    toreKass = goalStats[2]
-    torDifferenz = toreGesch-toreKass
-    geschKass = toreGesch/toreKass
-    if geschKass > 1:
-        geschKassA = round(geschKass)
-        geschKassB = 1
-    else:
-        geschKassA = 1
-        geschKassB = round(1/geschKass)
-
-    gewinnChance = (len(goalStats[1])/gamesPlayed)*100
-
+    # Pack everything into a dictionary
     statsDict = {   "gamesPlayed": gamesPlayed,
                     "maxElo": maxElo,
                     "minElo": minElo,
@@ -430,12 +302,12 @@ def getStatsP(playerName):
                     "geschKassA": geschKassA,
                     "geschKassB": geschKassB,
                     "zielBand": zielBand,
-                    "gewinnChance": gewinnChance}
+                    "gewinnChance": gewinnChance,
+                    "wingman": wingman,
+                    "nemesis": nemesis}
 
     ### Weitere Ideen
     # Längste Siegesserie
-    # Lieblingspartner
-    # Lieblingsgegner
     return statsDict
 
 def formatStats(stats, mode):
@@ -443,6 +315,8 @@ def formatStats(stats, mode):
         text =  """```
 ------Spielstatistik------
 Spiele insgesamt: {}
+Wingman: {}
+Nemesis: {}
 Tore geschossen: {}
 Geschossen vs Kassiert: {} zu {}
 Gewinnchance: {:.2f}%\n
@@ -452,10 +326,12 @@ Max: {:.2f}
 Min: {:.2f}
 Durchschnitt: {:.2f}
 Median: {:.2f}
-```""".format(*[stats.get(i)for i in ["gamesPlayed", "toreGesch", "geschKassA", "geschKassB", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
+```""".format(*[stats.get(i)for i in ["gamesPlayed", "wingman", "nemesis", "toreGesch", "geschKassA", "geschKassB", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
     elif(mode == "fremd"):
         text =  """```
 ------Spielstatistik------
+Wingman: {}
+Nemesis: {}
 Geschossen vs Kassiert: {} zu {}
 Gewinnchance: {:.2f}%\n
 ------ELO------
@@ -464,7 +340,7 @@ Max: {:.2f}
 Min: {:.2f}
 Durchschnitt: {:.2f}
 Median: {:.2f}
-```""".format(*[stats.get(i)for i in ["geschKassA", "geschKassB", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
+```""".format(*[stats.get(i)for i in ["wingman", "nemesis", "geschKassA", "geschKassB", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
     else: text = "Error"
     return text
 ########## MAIN ###################
@@ -489,16 +365,6 @@ def accessDatabase():
     connection = sqlite3.connect("ELO.db")
     cur = connection.cursor()
     return cur
-
-
-    #matches2plot, elo2plot = read_playerdata(playerName)
-    #plot_graph(matches2plot, elo2plot)
-    #plot_fullgraph(matches2plot, elo2plot)
-
-   # connection.close()
-# match_file.close()
-#plt.show()
-#plt.savefig("test_plot.png", dpi=100)
 
 def getLastGame():
     with open('match_history.csv', 'r') as f:
