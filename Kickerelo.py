@@ -48,14 +48,11 @@ def elo_entry(cursor, table_name, match_number, elo_value):
 
 # Get the current Elo of a list of player from their respective table
 def elo_extract(players):
-    connection = sqlite3.connect("ELO.db")
-    cur = connection.cursor()
+
     elos = []
     for player in players:
         try:
-            cur.execute("SELECT elo_value FROM " + player + " WHERE match_number = (SELECT max(match_number) FROM " + player + ")")
-            read_value = cur.fetchall()
-            elos.append(read_value[0][0])
+            elos.append(getELOs(player).iloc[-1])
         except:elos.append(100.00) # assume that players not in the list are new and have 100.00 ELO
     return elos
 
@@ -137,23 +134,27 @@ def plot_fullgraph(x, y):
     plt.savefig("elo_plot.png", bbox_inches='tight', dpi=100)
     plt.clf()
 
-def plotGameGraph(x, y, names):
-    lim = max(max(x))
-    x_full = [[] for i in x]
-    y_full = [[] for i in x]
-    y_curr = 100
-    for i in range(len(x_full)):
-        for k in range(min(min(x)), lim+1):
-            x_full[i].append(k)
-            if k in x[i]:
-                x_curr = x[i].index(k)
-                y_curr = y[i][x_curr]
-            y_full[i].append(y_curr)
-    for i in range(len(x_full)):
-        plt.plot(x_full[i], y_full[i], label= names[i])
-    plt.xlabel('Spielnummer')
-    plt.ylabel('ELO')
-    plt.legend()
+def plotGameGraph(players, numGames):
+
+    # extract players' ELOs and concat them into a df where each column is a player
+    dfs = []
+    for each in players:
+        dfs.append(getELOs(each).tail(numGames).reset_index(drop=True))
+    df = pd.concat(dfs, axis=1)
+    df.columns = players
+    for player in df.columns:
+        shifts = pd.isna(df[player]).sum()
+        if shifts > 0: df[player] = df[player].shift(periods=shifts)
+    #df = df.fillna(method='ffill')
+
+    # plot the last numGames games into a line plot
+    df.plot(kind='line',y=df.columns)
+    plt.title('die letzten {} Spiele'.format(numGames), alpha=0.6)
+    plt.legend(ncol = 2, frameon = False, loc = 'upper center', bbox_to_anchor=(0.5, 0))
+    plt.tick_params(top=False, bottom=False, left=False, right=False, labelleft=True, labelbottom=False)
+    plt.yticks(alpha=0.4)
+    plt.grid(axis = 'x')
+
     plt.savefig("elo_plot.png", bbox_inches='tight', dpi=100)
     plt.clf()
 
@@ -221,7 +222,7 @@ def getGames(playerName):
     df = pd.read_sql_query("SELECT * FROM matches", connection).drop(["match_number"], axis=1)
 
     # filter matches of a specific player
-    df = df[(df == playerName).any(axis = 1)]
+    df = df[(df.drop(['goals_A', 'goals_B'], axis = 1) == playerName).any(axis = 1)]
 
     # Rearrange the the columns, so that the filtered player is always "player A1"
     df.loc[df['player_A2'] == playerName, ['player_A1', 'player_A2']] = df.loc[df['player_A2'] == playerName, ['player_A2', 'player_A1']].values
@@ -266,6 +267,13 @@ def getStats(playerName):
     toreGesch = df["goals_A"].sum()
     toreKass = df["goals_B"].sum()
     torDifferenz = toreGesch-toreKass
+    opfer = 2 * (df['goals_B']== 0).sum()
+
+    #Calc consecutive wins
+    df_wins = df.copy()
+    df_wins['subgroup'] = (df_wins['goals_A'] != df_wins['goals_A'].shift(1)).cumsum()
+    df_wins = df_wins[df_wins['goals_A']== 10]
+    consWins = df_wins['subgroup'].value_counts().max()
 
     #Define the toreGesch/toreKass ratio
     geschKass = toreGesch/toreKass
@@ -304,7 +312,9 @@ def getStats(playerName):
                     "zielBand": zielBand,
                     "gewinnChance": gewinnChance,
                     "wingman": wingman,
-                    "nemesis": nemesis}
+                    "nemesis": nemesis,
+                    "opfer": opfer,
+                    "consWins": consWins}
 
     ### Weitere Ideen
     # Längste Siegesserie
@@ -319,6 +329,8 @@ Wingman: {}
 Nemesis: {}
 Tore geschossen: {}
 Geschossen vs Kassiert: {} zu {}
+Längste Siegesserie: {}
+Zerstörte Gegner: {}
 Gewinnchance: {:.2f}%\n
 ------ELO------
 ZB: ELO-{}
@@ -326,13 +338,15 @@ Max: {:.2f}
 Min: {:.2f}
 Durchschnitt: {:.2f}
 Median: {:.2f}
-```""".format(*[stats.get(i)for i in ["gamesPlayed", "wingman", "nemesis", "toreGesch", "geschKassA", "geschKassB", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
+```""".format(*[stats.get(i)for i in ["gamesPlayed", "wingman", "nemesis", "toreGesch", "geschKassA", "geschKassB", "consWins", "opfer", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
     elif(mode == "fremd"):
         text =  """```
 ------Spielstatistik------
 Wingman: {}
 Nemesis: {}
 Geschossen vs Kassiert: {} zu {}
+Längste Siegesserie: {}
+Zerstörte Gegner: {}
 Gewinnchance: {:.2f}%\n
 ------ELO------
 ZB: ELO-{}
@@ -340,7 +354,7 @@ Max: {:.2f}
 Min: {:.2f}
 Durchschnitt: {:.2f}
 Median: {:.2f}
-```""".format(*[stats.get(i)for i in ["wingman", "nemesis", "geschKassA", "geschKassB", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
+```""".format(*[stats.get(i)for i in ["wingman", "nemesis", "geschKassA", "geschKassB", "consWins", "opfer", "gewinnChance", "zielBand","maxElo", "minElo", "meanElo", "medianElo"]])
     else: text = "Error"
     return text
 ########## MAIN ###################

@@ -47,7 +47,7 @@ def eloInquiry(update, context):
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
   if(userData != -1):
-      currentELO = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())[1][-1]
+      currentELO = Kickerelo.getELOs(userData[1]).iloc[-1]
       context.bot.send_message(chat_id=chat_id, text="Deine aktuelle ELO beträgt: {:.2f}".format(currentELO))
       print("Read Elo")
   else:
@@ -61,7 +61,7 @@ def eloInquiryFremd(update, context):
     userDataFremd = userManagement.dataByPseudo(context.args[0])
     print(context.args[0])
     if(userDataFremd != -1):
-      currentELO = Kickerelo.read_playerdata(userDataFremd[1], Kickerelo.accessDatabase())[1][-1]
+      currentELO = Kickerelo.getELOs(userDataFremd[1]).iloc[-1]
       context.bot.send_message(chat_id=chat_id, text="Die aktuelle ELO von {} beträgt: {:.2f}".format(context.args[0], currentELO))
       print("Read Elo von")
     else:
@@ -101,8 +101,8 @@ def eloProgressInquiry(update, context):
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
   if(userData != -1):
-      ELOdata = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())
-      Kickerelo.plot_fullgraph(ELOdata[0][-100:], ELOdata[1][-100:])
+
+      Kickerelo.plotGameGraph([userData[1]], 100)
       #time.sleep(5)
       context.bot.send_photo(chat_id=chat_id, photo = open('elo_plot.png', 'rb'))
       time.sleep(0.5)
@@ -126,18 +126,24 @@ def lastRoundInquiry(update, context):
       rounds = 1
 
     textAlle = ""
-    lastELOs = Kickerelo.read_playerdata(userData[1], Kickerelo.accessDatabase())[1][-(1 + rounds*2):]
+    df = Kickerelo.getELOs(userData[1]).iloc[-(1 + rounds*2):].reset_index(drop=True)
+    df2 = Kickerelo.getGames(userData[1]).iloc[-2*rounds:].reset_index(drop=True)
+    df2['diffs'] = (df - df.shift(1)).shift(-1)
+    df2[["goals_AR", "goals_BR", "diffsR"]] = df2[["goals_A", "goals_B", "diffs"]].shift(-1)
+    df2 = df2.iloc[::2]
 
-    for i in range(1,rounds+1):
-        lastThreeELOs = lastELOs[-3:]
-        lastELOs = lastELOs[:-2]
-        diff1 = lastThreeELOs[1] - lastThreeELOs[0]
-        diff2 = lastThreeELOs[2] - lastThreeELOs[1]
-        lastRound = Kickerelo.getGames(userData[1])[-2*i:]
-        pseudos = [userManagement.dataByName(idx)[2] if "anon" not in userManagement.dataByName(idx)[2] else "anon" for idx in lastRound[0][1:5]]
-        textRunde = "`{}+{} vs.\n{}+{}:\nH: {} zu {} ({:.2f})\nR: {} zu {} ({:.2f})`\n".format(pseudos[0], pseudos[1], pseudos[2], pseudos[3], lastRound[0][5], lastRound[0][6], diff1, lastRound[1][5], lastRound[1][6], diff2)
-        textAlle += textRunde
-    context.bot.send_message(chat_id=chat_id, text="*Letzte Runde*\n{}".format(textAlle), parse_mode=telegram.ParseMode.MARKDOWN)
+    #userData[2]
+
+    df2['text'] = df2.apply(lambda x : x.to_list(), axis = 1)
+    resString = "\n{}+{} vs.\n{}+{}:\nH: {} zu {} ({:.2f})\nR: {} zu {} ({:.2f})\n"
+
+    text = df2['text'].apply(lambda x: resString.format(*([userManagement.dataByName(x[0])[2],
+                                                          userManagement.dataByName(x[1])[2],
+                                                          userManagement.dataByName(x[2])[2],
+                                                          userManagement.dataByName(x[3])[2]]+x[4:]))).to_list()
+
+    textAlle = "".join(text)
+    context.bot.send_message(chat_id=chat_id, text="*Letzte Runde(n)*\n`{}`".format(textAlle), parse_mode=telegram.ParseMode.MARKDOWN)
     print("Get last round")
   else:
     notAllowed(update, context, chat_id, "lastRound Inquiry")
@@ -187,14 +193,8 @@ def newresult(update, context):
     #ranking
     ranking = Kickerelo.ranking() # get current ranking
     rankingText = Kickerelo.rankingFormat(ranking, True, players, 0)
-    #todo match analysis: graphs with progress
-    graphData = [[],[],[]]
-    for person in players:
-      ELOdata = Kickerelo.read_playerdata(person, Kickerelo.accessDatabase())
-      graphData[0].append(ELOdata[0][-30:])
-      graphData[1].append(ELOdata[1][-30:])
-      graphData[2].append(person)
-    Kickerelo.plotGameGraph(graphData[0], graphData[1], graphData[2])
+
+    Kickerelo.plotGameGraph(players, 30)
     #todo print match analysis: elo difference, ranking, graphs with progress
     context.bot.send_message(chat_id=chat_id, text=rankingText, parse_mode=telegram.ParseMode.HTML)
     context.bot.send_message(chat_id=chat_id, text=elosDifferenceText, parse_mode=telegram.ParseMode.HTML)
