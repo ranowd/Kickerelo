@@ -7,4 +7,4 @@
 /ranking - _ELO-Rankingliste_
 /stats  - _Deine aktuellen Stats_
 `/statsvon Saborano` - _Aktuelle Stats von Saborano_
-/lastRound  - _Die Ergebnisse der letzten Runde, die du gespielt hast_
+/lastRound x - _Die Ergebnisse der letzten x (max 10) Runden, die du gespielt hast._
