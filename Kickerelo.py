@@ -213,6 +213,26 @@ def rankingFormat(ranking, elomaster = False, highlight = [], showLegends = Fals
         i += 1
     return outputStr
 
+def rankingFormat2(ranking, elomaster = False, highlight = [], showLegends = False, showBeginners = False):
+    df = pd.Dataframe(ranking)
+
+    i = 1
+    identity = 2
+    if(elomaster == True): identity = 1
+    outputStr = "<b>Ranking:</b> \n"
+    for item in ranking:
+        player = userManagement.dataByName(item[1])
+        if(((showLegends == False) and (player[4] == "legend")) or ((showBeginners == False) and (getGames(item[1]).count()[0] < 15))):
+            continue
+        if(player[1] in highlight):
+            outputStr += "<b>{}: {} - {:.2f}</b> \n".format(i, player[identity], item[0]) #highlighting
+        elif("anon" in player[identity]):
+            outputStr += "{}: {} - {:.2f} \n".format(i, "anon", item[0])
+        else:
+            outputStr += "{}: {} - {:.2f} \n".format(i, player[identity], item[0])
+        i += 1
+    return outputStr
+
 def getGames(playerName):
     # connect to the database
     connection = sqlite3.connect('ELO.db')
