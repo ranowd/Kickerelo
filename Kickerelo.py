@@ -196,41 +196,27 @@ def ranking():
     return ranking
 
 def rankingFormat(ranking, elomaster = False, highlight = [], showLegends = False, showBeginners = False):
-    i = 1
-    identity = 2
-    if(elomaster == True): identity = 1
-    outputStr = "<b>Ranking:</b> \n"
-    for item in ranking:
-        player = userManagement.dataByName(item[1])
-        if(((showLegends == False) and (player[4] == "legend")) or ((showBeginners == False) and (getGames(item[1]).count()[0] < 15))):
-            continue
-        if(player[1] in highlight):
-            outputStr += "<b>{}: {} - {:.2f}</b> \n".format(i, player[identity], item[0]) #highlighting
-        elif("anon" in player[identity]):
-            outputStr += "{}: {} - {:.2f} \n".format(i, "anon", item[0])
-        else:
-            outputStr += "{}: {} - {:.2f} \n".format(i, player[identity], item[0])
-        i += 1
-    return outputStr
+    # add the data needed to create the ranking text
+    df = pd.DataFrame(ranking)
+    df.columns = ["ELO", "player"]
+    df[['nick', 'role', 'status']] = df['player'].apply(lambda x: pd.Series(userManagement.dataByName(x)[2:5]))
+    df = df.merge((getGameCounts()>15).rename('quali'), left_on= 'player', right_index= True, how = 'left')
+    df['nick'] = df['nick'].apply(lambda x: x[:4] if 'anon' in x else x)
+    df['identity'] = df['nick']
 
-def rankingFormat2(ranking, elomaster = False, highlight = [], showLegends = False, showBeginners = False):
-    df = pd.Dataframe(ranking)
+    # active formatting depending on the function parameters
+    if(elomaster == True): df['identity'] = df['player']
+    if (showLegends == False): df = df[df['status'] != 'legend']
+    if (showBeginners == False): df = df[df['quali'] == True]
 
-    i = 1
-    identity = 2
-    if(elomaster == True): identity = 1
-    outputStr = "<b>Ranking:</b> \n"
-    for item in ranking:
-        player = userManagement.dataByName(item[1])
-        if(((showLegends == False) and (player[4] == "legend")) or ((showBeginners == False) and (getGames(item[1]).count()[0] < 15))):
-            continue
-        if(player[1] in highlight):
-            outputStr += "<b>{}: {} - {:.2f}</b> \n".format(i, player[identity], item[0]) #highlighting
-        elif("anon" in player[identity]):
-            outputStr += "{}: {} - {:.2f} \n".format(i, "anon", item[0])
-        else:
-            outputStr += "{}: {} - {:.2f} \n".format(i, player[identity], item[0])
-        i += 1
+    # create and output the formatted ranking text
+    df.reset_index(drop = True, inplace = True)
+    df['text'] = df.apply(lambda x: "{}: {} - {:.2f}".format((x.name + 1), x.identity, x.ELO), axis = 1)
+    mask = df['player'].isin(highlight) # create a mask for users that shall be highlighted
+    df.loc[mask, 'text'] = "<b>" + df.loc[mask, 'text'] + "</b>" # html Highlighting
+    df['text'] += '\n' # linebreaks at the end of each ranking entry
+    outputStr = "<b>Ranking:</b> \n" + "".join(df['text'].to_list())
+
     return outputStr
 
 def getGames(playerName):
@@ -252,6 +238,23 @@ def getGames(playerName):
     connection.close()
 
     return df
+
+def getGameCounts():
+    # connect to the database
+    connection = sqlite3.connect('ELO.db')
+    cursor=connection.cursor()
+
+    # fetch all matches as dataframe
+    df = pd.read_sql_query("SELECT * FROM matches", connection).drop(["match_number"], axis=1)
+
+    connection.close()
+
+    # put all player occurences into one column
+    allPlays =  df['player_A1'].append(df['player_A2']).append(df['player_B1']).append(df['player_B2'])
+
+    counts = allPlays.value_counts()
+
+    return counts
 
 def getELOs(playerName):
     # connect to the database
