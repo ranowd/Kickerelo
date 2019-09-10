@@ -135,7 +135,7 @@ def lastRoundInquiry(update, context):
     #userData[2]
 
     df2['text'] = df2.apply(lambda x : x.to_list(), axis = 1)
-    resString = "\n{}+{} vs.\n{}+{}:\nH: {} zu {} ({:.2f})\nR: {} zu {} ({:.2f})\n"
+    resString = "\n{}+{} vs.\n{}+{}:\nH: {:.0f} zu {:.0f} ({:.2f})\nR: {:.0f} zu {:.0f} ({:.2f})\n"
 
     text = df2['text'].apply(lambda x: resString.format(*([userManagement.dataByName(x[0])[2],
                                                           userManagement.dataByName(x[1])[2],
@@ -201,8 +201,24 @@ def newresult(update, context):
     context.bot.send_photo(chat_id=chat_id, photo = open('elo_plot.png', 'rb'))
     time.sleep(0.5)
     os.remove("elo_plot.png")
+    notifyPlayers(players, elosAfter, elosDifference, context)
     #todo send the analysis results to all the players
   else: notAllowed(update, context, chat_id, "Add new results")
+
+def notifyPlayers(players, elosAfter, elosDifference, context):
+  for player, eAfter, eDiff in zip(players, elosAfter, elosDifference):
+    chat_id = userManagement.dataByName(player)[6]
+    if(chat_id != None):
+      messageText = """
+`-------Spieleintrag-------`
+Neue ELO: *{:.2f}*
+Differenz: *{:.2f}*
+`--------------------------`
+Mehr Infos: /lastround""".format(eAfter, eDiff)
+      try:
+        context.bot.send_message(chat_id=chat_id, text=messageText, parse_mode=telegram.ParseMode.MARKDOWN)
+      except:pass
+
 
 ## Permissions and User Management
 def notAllowed(update, context, chat_id, logmessage):
