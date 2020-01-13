@@ -165,6 +165,25 @@ def getRanking(update, context):
     print("get Ranking")
   else: notAllowed(update, context, chat_id, "get ranking")
 
+def mahlzeit():
+  chat_id = update.message.chat_id
+  user = update.message.from_user['username']
+  userData = userManagement.dataByUsername(user)
+  if(userData != -1):
+    now = datetime.now()
+    dateNow = now.strftime("%d.%m.%Y")
+    foodf = pd.read_csv('food.csv')
+    try:
+      veg = foodf.loc[foodf['text']==date_time]['veg_g'].item()
+      fleisch = foodf.loc[foodf['text']==date_time]['fleisch_g'].item()
+      foodText = "Mahlzeit! Heute gibt es folgendes in der Kantine:\n\n{}\n\n{}".format(fleisch, veg)
+    except:
+      foodText = "Mahlzeit! Leider weiß ich nicht, was es heute zum Essen gibt."
+
+    context.bot.send_message( chat_id=chat_id,
+                              text=foodText,
+                              parse_mode=telegram.ParseMode.HTML)
+  else: notAllowed(update, context, chat_id, "mahlzeit")
 ## Key User Interactions
 
 def newresult(update, context):
@@ -315,6 +334,7 @@ dp.add_handler(CommandHandler('ranking',getRanking))
 dp.add_handler(CommandHandler('stats',statsInquiry))
 dp.add_handler(CommandHandler('statsvon',statsInquiryFremd))
 dp.add_handler(CommandHandler('lastRound',lastRoundInquiry))
+dp.add_handler(CommandHandler('mahlzeit',mahlzeit))
 #
 #     Admin Functions
 #
