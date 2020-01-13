@@ -165,7 +165,7 @@ def getRanking(update, context):
     print("get Ranking")
   else: notAllowed(update, context, chat_id, "get ranking")
 
-def mahlzeit():
+def mahlzeit(update, context):
   chat_id = update.message.chat_id
   user = update.message.from_user['username']
   userData = userManagement.dataByUsername(user)
@@ -174,9 +174,12 @@ def mahlzeit():
     dateNow = now.strftime("%d.%m.%Y")
     foodf = pd.read_csv('food.csv')
     try:
-      veg = foodf.loc[foodf['text']==date_time]['veg_g'].item()
-      fleisch = foodf.loc[foodf['text']==date_time]['fleisch_g'].item()
-      foodText = "Mahlzeit! Heute gibt es folgendes in der Kantine:\n\n{}\n\n{}".format(fleisch, veg)
+      veg = foodf.loc[foodf['text']==dateNow]['veg_g'].item()
+      fleisch = foodf.loc[foodf['text']==dateNow]['fleisch_g'].item()
+      if(foodf.loc[foodf['text']==dateNow]['dessert'].item()): dessert = "🍰"
+      else: dessert = "🥗"
+      foodText = "Mahlzeit! Heute gibt es folgendes in der Kantine:\n\n{}\n\n{}\n\n{}".format(fleisch, veg, dessert)
+
     except:
       foodText = "Mahlzeit! Leider weiß ich nicht, was es heute zum Essen gibt."
 
